@@ -1,0 +1,57 @@
+equation
+
+$\Delta og = og_{lag} \times \Delta og_{-1} -og_{mce} \times og + og_{dep} \times ib_{dep} + og_{po} \times ib_{po} + \varepsilon$
+
+$\Delta \varepsilon = ogn_{ar} \times \varepsilon + \epsilon (\sim \mathcal{N}(0,ogn_{sigma}^2)$
+
+$\dot{ppib}{+1} = \dot{ppib} + inf_{lag} \times(\dot p - \dot p_{-1}) - inf_{mce} \times (\dot p - inf_{star} - inf_{og} \times og)$
+
+$pibpot_{+1} = (1+g_{pot}) \times pib_{pot}$
+
+$qpib = (1+og) \times pibpot$
+
+$vpib = qpib \times ppib$
+
+$\Delta dette = ddette +one_{off}$
+
+$d = dette / vpib$
+
+$ddette = -s_p - int + t_{aut} \times vpib$
+
+$r_{inst} = g_{pot} + \dot{ppib} + ec + r_{dette} \times (d - d^{**})$
+
+$r_{app+1} = 1/r_{mat} \times r_{inst} + (1-1/r_{mat}) \times r_{app}$
+
+$dep = t_{dep} \times pib_{pot} \times ppib$
+
+$po = t_{po} \times vpib$
+
+$s_{p} = po - dep$
+
+$ib_{fr} = tpo_{s^*} \times (spp - s^*) + tpo_{d^*} \times (d- d^*) + tpo_{og}\times og$
+
+$(tpo_{d^*}, tpo_{og}, tpo_{s^*}) \leftarrow min(loss)$
+
+$loss = \Sigma og^2/(1+loss_{df})^t + loss_{ib} \times \Sigma ib_{sup}^2 \\+loss_d \times \Sigma_{t>loss_t} (d-d^*) + loss_{lasso} \times (tpo_{d^*}^2+tpo_{s^*}^2+tpo_{og}^2)$
+
+$ib_{spont,dep} = tx_{deriv,dep} \times index_{temps}\times t_{dep} \\+ t_{dep} \times \Delta(\frac{ppib_{dep} \times pibpot_{dep}}{pibpot \times pibpot})$
+
+$ib_{dep} = ib_{spont,dep} + (1-pcpo) \times ib_{sup}$
+
+$\Delta t_{dep} = ib_{dep}/t_{dep}$
+
+$ib_{spont,po} = - tx_{deriv,po} \times index_{temps} \times tpo$
+
+$ib_{po} = ib_{spont,po} + pcpo \times ib_{sup}$
+
+$\Delta t_{po} = - ib_{po}/t_{po}$
+
+$ppib_{dep} = ppib_dep \times (1+ infdep_{star}*txppib \\+ (1-infdep_{star})\times txppib_{dep} - infdep_{mce}\times (\frac{ppib_{dep}}{ppib}-1))$
+
+$pibpot_{dep} = pibpot_{dep, -1} \times (1+ potdep_{star}\times g_{pot} \\+ (1-potdep_{star}) \times txpibpot_{dep} - potdep_{mce}(\frac{pibpot_{dep}}{pibpot}-1))$
+
+$\Delta tcho = - tcho_{okun} \times dog - tcho_{mce} \times (tcho+og-tvnairu)$
+
+$tvnairu_{+1} = tvnairu - tvnairu_{mce} \times (tvnairu - nairu)$
+
+$\Delta x = x_{+1} - x$

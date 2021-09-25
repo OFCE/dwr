@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>equation-source</title>
+
+<script src="equation-source_files/header-attrs-2.11/header-attrs.js"></script>
+<link href="equation-source_files/highlightjs-9.12.0/default.css" rel="stylesheet" />
+<script src="equation-source_files/highlightjs-9.12.0/highlight.js"></script>
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+<style type="text/css">code{white-space: pre;}</style>
+<script type="text/javascript">
+if (window.hljs) {
+  hljs.configure({languages: []});
+  hljs.initHighlightingOnLoad();
+  if (document.readyState && document.readyState === "complete") {
+    window.setTimeout(function() { hljs.initHighlighting(); }, 0);
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+
+
+
+<ol style="list-style-type: decimal">
+<li><p><span class="math inline">\(\Delta og = og_{lag} \times \Delta og_{-1} -og_{mce} \times og + og_{dep} \times ib_{dep} + og_{po} \times ib_{po} + \varepsilon\)</span></p></li>
+<li><p><span class="math inline">\(\Delta \varepsilon = ogn_{ar} \times \varepsilon + \epsilon (\sim \mathcal{N}(0,ogn_{sigma}^2)\)</span></p></li>
+<li><p><span class="math inline">\(\dot{ppib}{+1} = \dot{ppib} + inf_{lag} \times(\dot p - \dot p_{-1}) - inf_{mce} \times (\dot p - inf_{star} - inf_{og} \times og)\)</span></p></li>
+<li><p><span class="math inline">\(pibpot_{+1} = (1+g_{pot}) \times pib_{pot}\)</span></p></li>
+<li><p><span class="math inline">\(qpib = (1+og) \times pibpot\)</span></p></li>
+<li><p><span class="math inline">\(vpib = qpib \times ppib\)</span></p></li>
+<li><p><span class="math inline">\(\Delta dette = ddette +one_{off}\)</span></p></li>
+<li><p><span class="math inline">\(d = dette / vpib\)</span></p></li>
+<li><p><span class="math inline">\(ddette = -s_p - int + t_{aut} \times vpib\)</span></p></li>
+<li><p><span class="math inline">\(r_{inst} = g_{pot} + \dot{ppib} + ec + r_{dette} \times (d - d^{**})\)</span></p></li>
+<li><p><span class="math inline">\(r_{app+1} = 1/r_{mat} \times r_{inst} + (1-1/r_{mat}) \times r_{app}\)</span></p></li>
+<li><p><span class="math inline">\(dep = t_{dep} \times pib_{pot} \times ppib\)</span></p></li>
+<li><p><span class="math inline">\(po = t_{po} \times vpib\)</span></p></li>
+<li><p><span class="math inline">\(s_{p} = po - dep\)</span></p></li>
+<li><p><span class="math inline">\(ib_{fr} = tpo_{s^*} \times (spp - s^*) + tpo_{d^*} \times (d- d^*) + tpo_{og}\times og\)</span></p></li>
+<li><p><span class="math inline">\((tpo_{d^*}, tpo_{og}, tpo_{s^*})_{tpo_.\in\mathcal{C}}\ \leftarrow min(E_0(loss))\)</span></p></li>
+<li><p><span class="math inline">\(loss = \Sigma og^2/(1+loss_{df})^t + loss_d \times \Sigma_{t&gt;loss_t} (d-d^*)\)</span></p></li>
+<li><p><span class="math inline">\(ib_{spont,dep} = tx_{deriv,dep} \times index_{temps}\times t_{dep} + t_{dep} \times \Delta(\frac{ppib_{dep} \times pibpot_{dep}}{pibpot \times pibpot})\)</span></p></li>
+<li><p><span class="math inline">\(ib_{dep} = ib_{spont,dep} + (1-pcpo) \times ib_{sup}\)</span></p></li>
+<li><p><span class="math inline">\(\Delta t_{dep} = ib_{dep}/t_{dep}\)</span></p></li>
+<li><p><span class="math inline">\(ib_{spont,po} = - tx_{deriv,po} \times index_{temps} \times tpo\)</span></p></li>
+<li><p><span class="math inline">\(ib_{po} = ib_{spont,po} + pcpo \times ib_{sup}\)</span></p></li>
+<li><p><span class="math inline">\(\Delta t_{po} = - ib_{po}/t_{po}\)</span></p></li>
+<li><p><span class="math inline">\(ppib_{dep} = ppib_dep \times (1+ infdep_{star}*txppib + (1-infdep_{star})\times txppib_{dep} - infdep_{mce}\times (\frac{ppib_{dep}}{ppib}-1))\)</span></p></li>
+<li><p><span class="math inline">\(pibpot_{dep} = pibpot_{dep, -1} \times (1+ potdep_{star}\times g_{pot} + (1-potdep_{star}) \times txpibpot_{dep} - potdep_{mce}(\frac{pibpot_{dep}}{pibpot}-1))\)</span></p></li>
+<li><p><span class="math inline">\(\Delta tcho = - tcho_{okun} \times dog - tcho_{mce} \times (tcho+og-tvnairu)\)</span></p></li>
+<li><p><span class="math inline">\(tvnairu_{+1} = tvnairu - tvnairu_{mce} \times (tvnairu - nairu)\)</span></p></li>
+</ol>
+<p><span class="math inline">\(\Delta x = x_{+1} - x\)</span></p>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

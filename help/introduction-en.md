@@ -1,0 +1,21 @@
+   
+
+-   **The initial steps in Debtwatch**
+
+The first step in **Debtwatch** is to set a target for the public debt ratio using the *debt target* slider (![slider](slider.png)) in the "**Main parameters/fiscal policy**" tab. The model then simulates a large number of trajectories and adjusts fiscal policy in such a way as to hit the chosen target over the horizon that is set by playing with the mix of expenditures and revenues. It is of course important to select one of the paths that hit the target, but also one that minimizes output gaps and the magnitude of the fiscal policies required. A lower debt target will require either higher taxes or larger spending cuts. The "**Expenditures and Taxation**" graph shows the changes required to meet the *debt target*.
+
+-   **Sensitivity to the parameters**
+
+**Debtwatch** makes it possible to explore changes in the parameters used to construct the scenarios. The future evolution of the debt is as uncertain as the future, and therefore can lie only within a range of possibilities. The parameters that can be modified cover a wide spectrum. They are divided into several categories, including the "**main parameters**", where one can choose the fiscal policy, the monetary policy and the main hypotheses used in the simulation, such as long-term growth (also called *potential growth*).
+
+For example, by playing on the sovereign-growth spread (*r-g*), one can tighten or ease the policy needed to reach the debt target. Currently, for many developed countries, this spread is negative (excluding the health crisis) and reduces the interest burden. In the "**Interest payment**" graph panel, we can see that the interest burden is lower than in the past.
+
+The "**advanced parameters**" tab provides access to most of the model's parameters. Modifying these can produce counter-intuitive results and may require an understanding of the model's equations in order to master the results. To go further, i.e. to access all the parameters or to modify the model's structure, it is possible to start from the open source code of `{dwr}`, freely accessible on github.
+
+-   **Scenarios and reproducibility**
+
+**Debtwatch** makes it possible to save (icon ![save](save.png)) the simulated scenarios or to use predefined scenarios (by loading the parameters in the slides using the icon ![slider](slider.png)). The "**scenarios**" tab can be used to display different scenarios (thanks to the ![eye](eye.png) icon). It is also possible to display the results with reference to the current scenario (i.e. as a "variant") with the ![anchor](anchor.png) icon. Each simulation is assigned a unique identifier with 5 or 6 lower case letters (for example `ispfl`). This identifier, which is displayed in the **Debtwatch** interface but also on the graphs, can be used to retrieve and examine the parameters used in a simulation. It is the basic building block that guarantees that the simulations are reproducible and can be exchanged with others. **Debtwatch** facilitates sharing on social networks. No simulation name is retained (so as to avoid moderation issues). The codes are unique and shared by all users. The predefined scenarios are built in this fashion.
+
+-   **Fiscal policy: The first rule is that there are no rules**
+
+More specifically, in **Debtwatch** fiscal policy is calculated by defining a reaction function that determines the fiscal impulse as a function of the output gap, the gap between surplus and surplus stabilizing the debt, and the debt to debt target gap. The 3 coefficients of this reaction function are calculated (optimized) for each starting point (initial conditions of the dynamic system) and each set of assumptions (parameters, exogenous to the model). The optimization is stochastic (the expectation of the loss over a set of random testings is minimized) and the parameters are deterministic. This makes it possible, for given initial conditions and given parameters, to approach an optimal policy. This is not a fiscal rule because the coefficients of the reaction function depend (heavily) on the parameters of the simulation or the initial conditions. The reaction function therefore does not have sufficient generality to apply to even closely related situations. This is why there is no fiscal rule.

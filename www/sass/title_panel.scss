@@ -1,0 +1,74 @@
+
+#title_panel {
+  
+  min-height: 90px;
+  border-bottom: 1px solid #E62736;
+
+  .logo {
+    text-align: center;
+    margin-top: 30px;
+  }
+
+  .title {
+    text-align: center;
+    margin-left: -15px;
+  }
+  
+  .subtitle {
+    
+    background-color: $lightgrey;
+    text-align: center;
+    color: $red;
+    
+    #toggle_sidebar_wrapper {
+      
+      position: absolute;
+      top: 20%;
+      
+      button {
+        background-color: unset;
+        border: none;
+        font-size: 25px;
+      }
+      
+      button:focus {
+        box-shadow: none;
+      }
+    }
+    
+    h3 {
+      margin-left: 20px;
+    }
+    
+  }
+  
+  .languages {
+    
+    display: flex;
+    padding-left: 30px;
+    font-size: 1.2rem;
+    margin-top: 28px;
+    
+    .language-item {
+      width: 50px;
+    }
+    
+    a {
+      color: $dark;
+    }
+    
+  }
+  
+  .social-buttons {
+    
+    padding-left: 30px;
+    font-size: 1.2rem;
+    margin-top: 28px;
+    
+    a {
+      color: $dark;
+    }
+    
+  }
+  
+}

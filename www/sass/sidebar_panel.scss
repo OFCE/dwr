@@ -1,0 +1,227 @@
+
+#sidebar_panel {
+  
+  background-color: white;
+  margin-left: -15px;
+  padding-right: 0;
+  
+  .checkbox {
+    margin-left: 10px;
+  }
+  
+  .parametres-principaux, .parametres-secondaires {
+    
+    background-color: $darkgrey;
+    padding-bottom: 40px;
+    
+    .sidebar-title {
+      
+      background-color: $red;
+      display: inline-block;
+      padding: 15px 40px;
+      margin: 0 0 20px 0;
+      text-transform: uppercase;
+      color: white;
+      
+      h3 {
+        font-size: 20px;
+        margin: 0;
+      }
+      
+    }
+    
+    /* Menu pays */
+    .country-wrapper {
+      
+      margin: auto;
+      margin-bottom: 30px;
+      width: 100%;
+      padding-left: 40px;
+      padding-right: 40px;
+      
+      .shiny-input-container {
+        width: unset;
+      }
+      
+      label {
+        font-size: 15px;
+      }
+      
+    }
+    
+    /* Règle automatique */
+    .autorule {
+      
+      margin-top: 30px;
+      font-size: 15px;
+      
+      button {
+        background-color: $blue;
+        color: white;
+        padding: 2px;
+      }
+      
+      #rule {
+        
+        margin-left: 10px;
+        
+        .katex {
+          font-size: 15px;
+        }
+        
+      }
+      
+    }
+    
+    /* Bloc pour un paramètre */
+    .parametres-wrapper {
+      
+      margin: 20px 40px;
+      
+      h4 {
+        font-size: 20px;
+        font-weight: 900;
+        color: $dark;
+      }
+      
+      .widget-wrapper {
+        
+        margin-bottom: 5px;
+        
+        label {
+          
+          width: 100%;
+          margin-bottom: 0;
+        
+          .widget-label {
+            
+            display: flex;
+            font-size: 15px;
+            align-items: center;
+            justify-content: space-between;
+            height: 40px;
+            margin: 0;
+            padding: 0 10px;
+            cursor: pointer;
+            
+            .parametres-label {
+              width: 70%;
+            }
+            
+            .parametres-value {
+              color: $red;
+            }
+            
+            i {
+              color: $dark;
+            }
+            
+          }
+          
+        }
+        
+        .widget-label:hover {
+          background-color: $lightgrey2 !important;
+        }
+        
+        .widget-label-selected {
+          background-color: $lightgrey2 !important;
+          transition: 0.5s;
+        }
+        
+      }
+      
+      .widget-wrapper:nth-child(odd) {
+        .widget-label {
+          background-color: $darkgrey2;
+          transition: 0.5s;
+        }
+      }
+      
+      .widget-wrapper:nth-child(even) {
+        .widget-label {
+          background-color: $darkgrey;
+          transition: 0.5s;
+        }
+      }
+      
+    }
+    
+  }
+  
+  /* Bloc pour les paramètres secondaires */
+  .parametres-secondaires {
+    
+    background-color: white;
+    
+    .sidebar-title {
+      
+      background-color: unset;
+      display:flex;
+      justify-content: space-between;
+      border-bottom: 1px solid $blue;
+      margin-bottom: 20px;
+      padding: 0;
+      
+      h3 {
+        padding: 15px 40px;
+        background-color: $blue;
+      }
+      
+      button {
+        background-color: unset;
+        border: none;
+        padding: 5px 15px 0 15px;
+      }
+      
+    }
+    
+    .parametres-wrapper {
+      
+      .widget-wrapper {
+        
+        .slider-widget {
+          
+          background-color: $lightgrey;
+          
+          input {
+            background-color: $lightgrey;
+          }
+          
+        }
+        
+      }
+      
+      .airyearpicker-wrapper {
+        
+        .shiny-input-container {
+          
+          width: unset;
+        
+          label {
+          }
+          
+        }
+        
+      }
+      
+      .widget-wrapper:nth-child(odd) {
+        .widget-label {
+          background-color: #FCF9F9;
+          transition: 0.5s;
+        }
+      }
+      
+      .widget-wrapper:nth-child(even) {
+        .widget-label {
+          background-color: white;
+          transition: 0.5s;
+        }
+      }
+      
+    }
+    
+  }
+  
+}
+

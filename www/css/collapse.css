@@ -1,0 +1,14 @@
+
+.section-title {
+  display:flex;
+  justify-content: space-between;
+  border-bottom: 1px solid #E62736;
+  margin-bottom: 20px;
+}
+
+.section-title button {
+  background-color: unset;
+  border: none;
+  padding: 10px 15px 0 15px;
+  color: #545454;
+}
