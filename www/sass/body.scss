@@ -1,0 +1,26 @@
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 400;
+}
+
+#body {
+  background-color: $lightgrey;
+}
+
+.shiny-input-container {
+  width: unset !important;
+}
+
+.form-group {
+  margin-bottom: 0;
+}
+
+.nav-tabs {
+  
+  border: none;
+  
+  li.active a {
+    border: none;
+  }
+  
+}

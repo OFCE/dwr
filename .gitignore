@@ -1,0 +1,10 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+.ggauth
+.ggaut/
+logs/
+.Renviron
+.secrets
+rsconnect/

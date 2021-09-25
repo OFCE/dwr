@@ -1,0 +1,76 @@
+
+
+#main_panel {
+  
+  padding: 50px 7%;
+  
+  .introduction {
+    
+    position: relative;
+    background-color: white;
+    padding: 10px 25px 30px 25px;
+    margin-bottom: 20px;
+    
+    h3 {
+      font-size: 20px;
+      color: $red;
+      text-transform: uppercase;
+    }
+    
+    .intro-more {
+      
+      position: absolute;
+      bottom: 0;
+      right: 25px;
+      text-align: right;
+      font-size: 15px;
+      
+      a {
+        color: $red;
+      }
+      
+    }
+    
+  }
+  
+  .graphiques {
+    
+    .graphique {
+      
+      margin-bottom: 30px;
+      
+      .graphique-title {
+        
+        display: flex;
+        justify-content: space-between;
+        border-bottom: 2px solid $red;
+        
+        h3 {
+          color: $dark;
+          font-weight: 900;
+          font-size: 20px;
+        }
+        
+        button {
+          background-color: unset;
+          border: none;
+          padding: 10px 15px 0 15px;
+          color: #545454;
+        }
+        
+      }
+      
+      .graphique-content {
+        background-color: white;
+        padding: 20px;
+      }
+      
+      .graphique-tooltip {
+        position: relative;
+      }
+      
+    }
+    
+  }
+  
+}
