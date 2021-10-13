@@ -1,6 +1,6 @@
-# dwr : debtwatchR
+# dwr - debtwatchR
 
-L'accès debtwatch ezst accessible à : <https://ofce.shinyapps.io/debtwatchr>.
+**debtwatch** est accessible à : <https://ofce.shinyapps.io/debtwatchr>.
 Ici se trouve le code source nécessaire pour faire fonctionner **debtwatch** en local, modifier le modèle ou encore l'interface.
 
 ## objectifs
@@ -39,7 +39,7 @@ Le répertoire R contient les programmes R qui font fonctionner l'application.
 Le coeur de calcul est assuré dans le fichier `dwr_sim.r` mais également dans la fonction reactive de `app.r`.
 Dans le répertoire `odin`, le fichier `dwrstochasticmodel.r` contient le code du modèle, lisible par `{odin_dust}`.
 Cela ressemble à du R, mais ce n'en est pas, c'est un DSL.
-Il faut installer la dernière version disponible du package `devtools::install_github("mrc-ide/odin_dust")` ainsi que le solver d'équations différentielles `devtools::install_github("mrc-ide/dust")`.
+Il faut installer la dernière version disponible du package `devtools::install_github("mrc-ide/odin.dust")` ainsi que le solver d'équations différentielles `devtools::install_github("mrc-ide/dust")`.
 `{dust}` compile le modèle, ce qui permet une performance très élevée et permet de faire du montecarlo en temps réel.
 Un défaut de ce package est qu'il suppose que la réccurence ets résolue.
 Cela contraint la modélisation.

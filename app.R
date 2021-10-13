@@ -22,7 +22,7 @@ options(shiny.useragg = TRUE)
 # gfonts::setup_font("source-code-pro", output_dir="www")
 # gfonts::setup_font("source-sans-pro", output_dir="www")
 # gfonts::setup_font("nunito", output_dir="www")
- purrr::walk(list.files("R/", "*.[r|R]"), ~ source("R/{.x}" |> glue::glue(), encoding = "UTF-8"))
+# purrr::walk(list.files("R/", "*.[r|R]"), ~ source("R/{.x}" |> glue::glue(), encoding = "UTF-8"))
 # options(shiny.reactlog = TRUE)
 
 # Translation files
@@ -58,7 +58,7 @@ translation_en <- read.csv("data/translations/translation_en.csv", fileEncoding 
 # globals data -----------------------
 init_cty <- "FRA"
 init_sy <- 2022
-globals <- set_globals(init_cty, version = "1.0.0")
+globals <- set_globals(init_cty, version = "1.0.1")
 
 # equations -------------------
 # equations should be located in odin folder
@@ -69,7 +69,7 @@ globals$model <- odin.dust::odin_dust(
 # to recalculate all presets
 # reset_presets_cache(globals)
 presets <- calc_presets(country = init_cty, globals = globals)
-init_dp <- dataandparams(country = init_cty, start_year = init_sy, globals = globals)
+# init_dp <- dataandparams(country = init_cty, start_year = init_sy, globals = globals)
 
 katex_equations <- HTML(paste(readLines("help/equation-katex.html"), collapse="\n"))
 
@@ -542,9 +542,29 @@ server <- function(input, output, session) {
   )
   
   # record a la même structure que sim (et est utilisé pour garder une mémoire)
+  # record <- reactiveVal(
+  #   list(
+  #     p = presets |> dplyr::filter(nom_fr == "AMECO 5/2021") |> dplyr::pull(pwr) |> purrr::pluck(1),
+  #     previous_p = NULL,
+  #     simulations = tibble::tibble(simulation = list()),
+  #     h = NULL,
+  #     df = tibble::tibble(),
+  #     start_year = 2022,
+  #     periods = 28,
+  #     country = "FRA",
+  #     uuid = presets |> dplyr::filter(nom_fr == "AMECO 5/2021" & country == "FRA") |> dplyr::pull(uuid),
+  #     rule_text = "",
+  #     no_log = presets |> dplyr::filter(nom_fr == "AMECO 5/2021" & country == "FRA") |> dplyr::pull(uuid),
+  #     is_precalc = TRUE,
+  #     seed = (presets |> dplyr::filter(nom_fr == "AMECO 5/2021" & country == "FRA") |> dplyr::pull(pwr) |> purrr::pluck(1))$seed,
+  #     uuid_found = NULL,
+  #     p_found = NULL
+  #   )
+  # )
+  
   record <- reactiveVal(
     list(
-      p = presets |> dplyr::filter(nom_fr == "AMECO 5/2021") |> dplyr::pull(pwr) |> purrr::pluck(1),
+      p = NULL,
       previous_p = NULL,
       simulations = tibble::tibble(simulation = list()),
       h = NULL,
@@ -552,11 +572,11 @@ server <- function(input, output, session) {
       start_year = 2022,
       periods = 28,
       country = "FRA",
-      uuid = presets |> dplyr::filter(nom_fr == "AMECO 5/2021" & country == "FRA") |> dplyr::pull(uuid),
+      uuid = "",
       rule_text = "",
-      no_log = presets |> dplyr::filter(nom_fr == "AMECO 5/2021" & country == "FRA") |> dplyr::pull(uuid),
-      is_precalc = TRUE,
-      seed = (presets |> dplyr::filter(nom_fr == "AMECO 5/2021" & country == "FRA") |> dplyr::pull(pwr) |> purrr::pluck(1))$seed,
+      no_log = "",
+      is_precalc = FALSE,
+      seed = NULL,
       uuid_found = NULL,
       p_found = NULL
     )
@@ -582,16 +602,16 @@ server <- function(input, output, session) {
   
   # observe Event ----------------------------
   ## ------ * Conditions initiales (UI) -----------------------------------------
-  observeEvent(input$start_year, {
-    shinyjs::html(
-      selector = "#widget-label-i_tdeppp span",
-      html = HTML(paste(i18n$t("Calage DP/DIB"), input$start_year))
-    )
-    shinyjs::html(
-      selector = "#widget-label-i_tpo span",
-      html = HTML(paste(i18n$t("Calage DP/DIB"), input$start_year))
-    )
-  })
+  # observeEvent(input$start_year, {
+  #   shinyjs::html(
+  #     selector = "#widget-label-i_tdeppp span",
+  #     html = HTML(paste(i18n$t("Calage DP/DIB"), input$start_year))
+  #   )
+  #   shinyjs::html(
+  #     selector = "#widget-label-i_tpo span",
+  #     html = HTML(paste(i18n$t("Calage DP/DIB"), input$start_year))
+  #   )
+  # })
   
   observeEvent(input$refreshrule, {
     dfr <- refresh_rule_click() + 1
@@ -616,10 +636,10 @@ server <- function(input, output, session) {
     
     if(is.null(country_set$country) || country_set$country != country) { 
       
-      dandp <- dataandparams( 
+      dandp <- dataandparams(
         country = country,
-        start_year = start, 
-        periods = periods, 
+        start_year = start,
+        periods = periods,
         draws = draws,
         globals = globals)
       
@@ -642,6 +662,7 @@ server <- function(input, output, session) {
             relatif = FALSE, 
             index = dplyr::row_number()
           )
+        updatePrettyToggle(session=session, inputId = "relatif_actuel", value=FALSE)
         iscn <- max(scn$index)
       } else {
         iscn <- 0
@@ -686,16 +707,23 @@ server <- function(input, output, session) {
     country_set$params <- prms
   })
   
-  # ------ * airYearpicker values ----------------------------------------------
-  # observeEvent(input$start_hist, ignoreInit=TRUE, {
-  #   freezeReactiveValue(input, "start_year")
-  #   updateSliderInput2(session=session, "start_year", min=input$start_hist+1, max=max(2022, input$end_year))
-  # })
-  # observeEvent(input$start_year, ignoreInit=TRUE, {
-  #   freezeReactiveValue(input, "end_year")
-  #   updateSliderInput2(session=session, "end_year", min=input$start_year+1)
-  # })
-  # observeEvent(input$end_year, ignoreInit=TRUE, {
+  # dates et périodes ----------------------------------------------
+  observeEvent(list(input$start_hist, input$start_year), priority = 3, {
+    # dans ce cas freezé les values bloque tout
+    updateSliderInput2(session=session, "start_year", min=input$start_hist+1)
+    updateSliderInput2(session=session, "start_hist",  max=input$start_year-1)
+    
+    shinyjs::html(
+      selector = "#widget-label-i_tdeppp span",
+      html = HTML(paste(i18n$t("Calage DP/DIB"), input$start_year))
+    )
+    shinyjs::html(
+      selector = "#widget-label-i_tpo span",
+      html = HTML(paste(i18n$t("Calage DP/DIB"), input$start_year))
+    )
+    
+  })
+  # observeEvent(input$end_year, priority = 0, {
   #   freezeReactiveValue(input, "start_year")
   #   updateSliderInput2(session=session, "start_year", max=min(input$end_year-1, 2022))
   # })
@@ -716,7 +744,13 @@ server <- function(input, output, session) {
       scns <- scenarii()
       scns <- scns |>
         dplyr::mutate(graph = dplyr::if_else(saved & actuel, FALSE, graph))
-      c_s <- reactiveValuesToList(country_set)
+      c_s <- dataandparams(
+        country = input$country, 
+        start_year = input$start_year, 
+        periods = input$end_year-input$start_year,
+        draws=input$draws,
+        globals = globals
+      )
       rrefresh <- irr != old_record$irr || is.null(old_record$p$tpo_og) || ar
       pp <- set_params(les_inputs, globals, c_s)
       if(is.null(old_record$seed))
@@ -730,11 +764,21 @@ server <- function(input, output, session) {
         showNotification(tt("Calcul en cours"), type = "warning", duration = 3)
         pp$p <- calc_rule_params(globals = globals, params = pp$p, draws = 1000)
       } else {
-        pp$p$tpo_dstar <- old_record$p$tpo_dstar
-        pp$p$tpo_sstar <- old_record$p$tpo_sstar
-        pp$p$tpo_og <- old_record$p$tpo_og
+        if(f_uuid$ruleok)
+        {
+          pp$p$tpo_dstar <- f_uuid$params$tpo_dstar
+          pp$p$tpo_sstar <- f_uuid$params$tpo_sstar
+          pp$p$tpo_og <- f_uuid$params$tpo_og  
+        } else {
+          pp$p$tpo_dstar <- old_record$p$tpo_dstar
+          pp$p$tpo_sstar <- old_record$p$tpo_sstar
+          pp$p$tpo_og <- old_record$p$tpo_og
+        }
       }
-      
+      if(!is.null(pp$p$error)&&pp$p$error) { 
+        showNotification(tt("Echec de la simulation"), duration=15, type="error")
+        return(NULL)
+      }
       new_record <- log_params(
         pp,
         old_record, 
@@ -803,7 +847,7 @@ server <- function(input, output, session) {
       
       new_record$is_precalc <- FALSE
       new_record$country <- c_s$country
-      new_scenarii <- actuel2scenarii(new_record, scns, nom = nom)
+      new_scenarii <- actuel2scenarii(new_record, scns, nom = nom, relatif = !input$relatif_actuel)
       scn_s <- scenarii_saved()
       if(nrow(scn_s)>0) {
         if(any(scn_s$actuel))

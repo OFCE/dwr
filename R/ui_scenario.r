@@ -342,6 +342,10 @@ scenarii_server <- function(input, output, session, scenarii, scenarii_saved,
                 dplyr::mutate(
                   graph = dplyr::if_else(uuid == uuid_s, input[[stringr::str_c("graph_saved_", uuid_s)]], graph)
                 )
+              if(nrow(scn |> filter(graph))<2) {
+                scn |> mutate(relatif=FALSE)
+                updatePrettyToggle(session=session, inputId = "relatif_actuel", value=TRUE)
+              }
               scenarii(scn)
               scn_s <- scenarii_saved()
               scn_s <- scn_s |>
@@ -360,12 +364,20 @@ scenarii_server <- function(input, output, session, scenarii, scenarii_saved,
               if (!is_actuel&is_graphed) {
                 scn <- scn |>
                   dplyr::mutate(graph = dplyr::if_else(uuid == uuid_s, FALSE, graph))
+                if(nrow(scn |> filter(graph))<2) {
+                  scn |> mutate(relatif=FALSE)
+                  updatePrettyToggle(session=session, inputId = "relatif_actuel", value=TRUE)
+                }
                 scenarii(scn)
               }
               is_saved <- scn |> filter(uuid == uuid_s) |> pull(saved) |> pluck(1) %||% FALSE
               if (is_saved) {
                 scn <- scn |>
                   dplyr::mutate(saved = dplyr::if_else(uuid == uuid_s, FALSE, saved))
+                if(nrow(scn |> filter(graph))<2) {
+                  scn |> mutate(relatif=FALSE)
+                  updatePrettyToggle(session=session, inputId = "relatif_actuel", value=TRUE)
+                }
                 scenarii(scn)
               }
               scn_s <- scn_s |> dplyr::filter(uuid != uuid_s)
@@ -489,7 +501,12 @@ scenarii_server <- function(input, output, session, scenarii, scenarii_saved,
       scn <- scenarii()
       scn <- scn |>
         dplyr::mutate(graph = dplyr::if_else(uuid == presets[.x, ]$uuid & preset, input[[stringr::str_c("graph_preset_", .x)]], graph))
+      if(nrow(scn |> filter(graph))<2) {
+        scn |> mutate(relatif=FALSE)
+        updatePrettyToggle(session = session, inputId = "relatif_actuel", value=TRUE)
+      }
       scenarii(scn)
+
     })
     ## upload presets -------------------
     observeEvent(input[[stringr::str_c("upload_preset_", .x)]], ignoreInit = TRUE, {

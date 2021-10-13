@@ -2,7 +2,6 @@ pre_plot_sim <- function(scn, sim, gl, i18n) {
   if (is.null(scn) || is.null(sim) || sim$uuid == "") {
     return(NULL)
   }
-  
   scn <- scn |>
     dplyr::filter(graph == TRUE | actuel) |>
     dplyr::filter(!purrr::map_lgl(sim, is.null))
@@ -20,7 +19,8 @@ pre_plot_sim <- function(scn, sim, gl, i18n) {
   year_dette <- sim_principale$p$loss_t + start_year
   end_year <- sim_principale$p$end_year
   annot_year <- (end_year - start_year) %/% 2 + start_year
-  sim_p <- sim_principale$sim |>
+  sim_p  <- sim_principale$sim |>
+    left_join(sim$fh, by=c("variable", "year")) |> 
     dplyr::mutate(
       nom_fr = sim_principale$nom_fr,
       scn_index = 1,
@@ -43,9 +43,9 @@ pre_plot_sim <- function(scn, sim, gl, i18n) {
         year <= start_year ~ i18n$t("Prévisions (AMECO, possiblement amendées)"),
         year < year_dette ~ i18n$t("Simulation debwatch"),
         year >= year_dette ~ i18n$t("Simulation debwatch, avec contrainte de dette")
-        ),
+      ),
       scn_index = 1,
-      scn = dplyr::if_else(
+      scn = dplyr::if_else( 
         year == annot_year - 5,
         stringr::str_c(i18n$t(gl$vars$short[variable]), " - ", i18n$t(sim_principale$nom_fr)),
         NA_character_
@@ -106,13 +106,24 @@ pre_plot_sim <- function(scn, sim, gl, i18n) {
         q0.5 = q0.5 - q0.5[index==0],
         scn = str_c(scn, " [//", p_uuid, "]"),
         nom_fr = str_c(nom_fr, " [//", p_uuid, "]"),
-        scn_index = scn_index - 1) |> 
+        scn_index = scn_index - 1,
+        label = label,
+        valeur = stringr::str_c(signif(q0.5, 3) * 100, "%"),
+        tip1 = "Ecart entre {uuid} et {p_uuid} de {valeur}" |> glue::glue(),
+        tip2 = case_when(
+          year <= cn_year ~ i18n$t("Données historiques"),
+          year <= start_year ~ i18n$t("Prévisions (AMECO, possiblement amendées)"),
+          year < year_dette ~ i18n$t("Simulation debwatch"),
+          year >= year_dette ~ i18n$t("Simulation debwatch, avec contrainte de dette")
+        ),
+        tip3 = ""
+      ) |> 
       ungroup() |> 
       filter(index!=0)
   }
   
   # Un graphique generique
-  
+  # browser()
   gen <- function(var) {
     lty <- c(l1 = "solid", l2 = "dashed", l3 = "dotted", l4 = "dotdash", l5 = "longdash", l6 = "twodash")
     sim_all <- sim_all |>
@@ -155,6 +166,18 @@ pre_plot_sim <- function(scn, sim, gl, i18n) {
       min(data_p_lims, na.rm = TRUE),
       min(data_p_lims_se, na.rm = TRUE)
     )
+    
+    if(start_year<max(sim$fh$year))
+      graph_fh <- ggplot2::geom_line(
+        data = ~ dplyr::filter(.x, scn_index == 1, year>=start_year),
+        mapping = ggplot2::aes(x = year, y = full_h, color=ic), 
+        linetype = "solid",
+        size = 0.5,
+        show.legend = FALSE,
+        na.rm = TRUE
+      ) 
+    else
+      graph_fh <- NULL
     
     graph_line <- ggplot2::geom_line(
       mapping = ggplot2::aes(x = year, y = q0.5, color = ic, linetype = linetype),
@@ -235,13 +258,14 @@ pre_plot_sim <- function(scn, sim, gl, i18n) {
       graph_text_down +
       graph_line +
       graph_point +
+      graph_fh +
       ggplot2::scale_colour_manual(values = color_scale, aesthetics = c("colour", "fill")) +
       ggplot2::scale_linetype_manual(values = lty) +
       ggplot2::theme_minimal(base_family = "source-sans-pro", base_size = 14) +
       ggplot2::xlab("") +
       ggplot2::ylab("")
   }
-
+  
   # uniquement pour les images enregistrées
   decoration <- function(title, pays, uuid) {
     ggplot2::labs(
@@ -272,7 +296,7 @@ pre_plot_sim <- function(scn, sim, gl, i18n) {
       year == max(year)
     ) |>
     dplyr::pull(q0.5)
-
+  
   return(list(
     data = sim_p,
     data_alt = sim_all,
@@ -306,13 +330,13 @@ post_plot_sim <- function(gen, var, title = NULL, pays = NULL, uuid = NULL, box_
       if(annote) list(
         ggplot2::geom_hline(yintercept = gen$dstar, col = "black", size = 0.5, linetype = "dotted"),
         ggplot2::annotate(
-        "text",
-        x = gen$minyear + 1,
-        y = gen$dstar*1.05,
-        label = glue::glue("d*={signif(gen$dstar*100,3)}%"),
-        hjust = 0,
-        size = 4
-      ))
+          "text",
+          x = gen$minyear + 1,
+          y = gen$dstar*1.05,
+          label = glue::glue("d*={signif(gen$dstar*100,3)}%"),
+          hjust = 0,
+          size = 4
+        ))
       else NULL
     )
   }
@@ -416,7 +440,7 @@ post_plot_sim <- function(gen, var, title = NULL, pays = NULL, uuid = NULL, box_
   }
   if(gen$anchor)
     g <-  g +  ggplot2::scale_y_continuous(labels = scales::label_percent(0.1))
-
+  
   return(g)
 }
 

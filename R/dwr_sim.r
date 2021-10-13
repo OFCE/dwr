@@ -60,12 +60,15 @@ dataandparams <- function(country, start_year, periods = 2050-start_year, draws=
       ec = irl/100 - ((ppib/dplyr::lag(ppib,3))^0.33 - 1)- ((pibpot/dplyr::lag(pibpot,3))^0.33 - 1) ) |> 
     tibble::as_tibble()
   
-  historical_data <- data |> 
+  full_historical_data <- data |> 
     dplyr::transmute(year,
                      dettep = dette/vpib, r_app,
                      spp, og, txppib, tpo, tdep, tdeppp, pibpot, qpib, tcho, tvnairu, gpib) |> 
-    dplyr::filter(year<=start_year) |> 
     tidyr::drop_na(dettep)
+  
+  historical_data <- full_historical_data |> 
+    dplyr::filter(year<=start_year) 
+  
   years <- c(min(historical_data$year), max(data$year))
   
   init <- data |> 
@@ -171,6 +174,7 @@ dataandparams <- function(country, start_year, periods = 2050-start_year, draws=
               p_init = p_init, 
               p_def = p_def,
               historical_data = historical_data, 
+              full_historical_data = full_historical_data, 
               init = init,
               years = years,
               country=country,
@@ -447,37 +451,39 @@ set_params <- function(inputs, globals, datas)
   p <- purrr::list_modify(p, !!!datas$p_init)
   p <- purrr::list_modify(p, !!!inputs)
   # les ci calees
-  if(s_y>globals$years[[2]]-2)
-  {
-    dtpo <- inputs$i_tpo%|||%0
-    dtdeppp <- inputs$i_tdeppp%|||%0
-    p$i_tpo <- NULL
-    p$i_tdeppp <- NULL
-    p$i_lagtdeppp <- p$i_lagtdeppp%|||%0 + dtdeppp 
-    p$i_lagtpo <- p$i_lagtpo%|||%0 + dtpo
-    # du coup on modifie l'historique
-    history <- forme_history(
-      datas$historical_data |> 
-        dplyr::filter(year>=inputs$start_hist), probs=c(0.025, 0.5, 0.975)
-    )
-    ses <- names(history |> dplyr::select(dplyr::starts_with("q0.", ignore.case = FALSE)) |> dplyr::select(-q0.5))
-    names(ses) <- ses
-    identities <- purrr::map(ses, ~ function(x) x)
-    new <- history |> 
-      dplyr::filter(year==s_y) |>
-      dplyr::select(year, q0.5, variable) |> 
-      tidyr::pivot_wider(names_from = variable, values_from = q0.5) |> 
-      dplyr::mutate(
-        spp = spp + dtpo - dtdeppp/(1+og),
-        tpo = tpo + dtpo, 
-        tdep = tdep + dtdeppp/(1+og),
-        ib_dep = ib_dep + dtdeppp,
-        ib_po = ib_po + dtpo) |> 
-      tidyr::pivot_longer(cols=-year, values_to = "q0.5", names_to = "variable") |> 
-      dplyr::mutate(dplyr::across(q0.5, .fns = identities, .names="{.fn}"))
-    history <- history |> 
-      dplyr::rows_update(new, by=c("year","variable"))
-  }
+  # if(s_y>globals$years[[2]]-2)
+  # {
+  dtpo <- inputs$i_tpo%|||%0
+  dtdeppp <- inputs$i_tdeppp%|||%0
+  p$i_tpo <- NULL
+  p$i_tdeppp <- NULL
+  p$i_lagtdeppp <- p$i_lagtdeppp%|||%0 + dtdeppp 
+  p$i_lagtpo <- p$i_lagtpo%|||%0 + dtpo
+  # du coup on modifie l'historique
+  history <- forme_history(
+    datas$historical_data |> 
+      dplyr::filter(year>=inputs$start_hist))
+  full_history <- forme_history(datas$full_historical_data) |>
+    select(-q0.025, -q0.975) |>
+    rename(full_h = q0.5) 
+  ses <- names(history |> dplyr::select(dplyr::starts_with("q0.", ignore.case = FALSE)) |> dplyr::select(-q0.5))
+  names(ses) <- ses
+  identities <- purrr::map(ses, ~ function(x) x)
+  new <- history |> 
+    dplyr::filter(year==s_y) |>
+    dplyr::select(year, q0.5, variable) |> 
+    tidyr::pivot_wider(names_from = variable, values_from = q0.5) |> 
+    dplyr::mutate(
+      spp = spp + dtpo - dtdeppp/(1+og),
+      tpo = tpo + dtpo, 
+      tdep = tdep + dtdeppp/(1+og),
+      ib_dep = ib_dep + dtdeppp,
+      ib_po = ib_po + dtpo) |> 
+    tidyr::pivot_longer(cols=-year, values_to = "q0.5", names_to = "variable") |> 
+    dplyr::mutate(dplyr::across(q0.5, .fns = identities, .names="{.fn}"))
+  history <- history |> 
+    dplyr::rows_update(new, by=c("year","variable"))
+  # }
   # le potentiel
   p$gpot <- rep(inputs$gpot_sj,periods)
   # les depenses publiques et les po
@@ -491,7 +497,7 @@ set_params <- function(inputs, globals, datas)
   if(inputs$go_mc) {
     p$draws  <- inputs$draws
     p$ogn  <-  inputs$og_n
-    p$ogn_sigma <- inputs$og_sigma
+    p$ogn_sigma <- inputs$ogn_sigma
   } else {
     p$draws  <- 1
     p$ogn  <-  0
@@ -503,7 +509,7 @@ set_params <- function(inputs, globals, datas)
   ss <- purrr::map(rlang::set_names(long_exo), ~trimortrick(p[[.x]], periods))
   p <- purrr::list_modify(p, !!!ss)
   
-  return(list(p=p, h=history, start_year=s_y, periods=periods, end_year = s_y + periods, start_hist = globals$years[[1]]))
+  return(list(p=p, h=history, fh=full_history, start_year=s_y, periods=periods, end_year = s_y + periods, start_hist = globals$years[[1]]))
 }
 
 calc_rule_params <- function(globals, params, draws=5000) {
@@ -520,11 +526,15 @@ calc_rule_params <- function(globals, params, draws=5000) {
     loss = medianloss2,
     draws = draws ,
     dt = 20)
-  p <- purrr::list_modify(params, !!!par_fr)
+  if(!is.null(par_fr$error))
+    return(list(error = TRUE))
+  p <- purrr::list_modify(params, !!!par_fr, error=FALSE)
   return(p)
 }
 
 do_rule_text <- function(tpo_og, tpo_sstar, tpo_dstar) {
+  if(is.null(tpo_og)||is.null(tpo_dstar)||is.null(tpo_sstar))
+    return("")
   c1 <- signif(tpo_og,2)
   c2 <- signif(tpo_sstar,2)
   c3 <- ifelse(tpo_dstar>0, stringr::str_c("+", signif(tpo_dstar,2)), signif(tpo_dstar,2))
@@ -558,7 +568,7 @@ best_FR_par <- function(p, model, controls, constraints = NULL, method="Nelder-M
         rlang::set_names(names(constraints)),
         ~{
           min(max(cont[.x], constraints[[.x]][[1]]), constraints[[.x]][[2]])
-          }
+        }
       )
     }
     err <- sum((as_vector(ccc)-cont)^2)
@@ -570,12 +580,17 @@ best_FR_par <- function(p, model, controls, constraints = NULL, method="Nelder-M
     ) + err
   }
   
-  opt <-optimx::optimx(
-    par=as_vector(controls), 
-    fn=\(x) ffo(x),
-    method=method,
-    control = list(kkt=FALSE, maxit = 2000)
+  opt <- try(
+    optimx::optimx(
+      par=as_vector(controls), 
+      fn=\(x) ffo(x),
+      method=method,
+      control = list(kkt=FALSE, maxit = 2000)
+    )
   )
+  
+  if("try-error"%in%class(opt))
+    return(list(error = TRUE))
   
   if(opt$convcode!=0)
   {
