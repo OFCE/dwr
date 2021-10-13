@@ -7,6 +7,7 @@
 #' @param i18n Objet pour traduire
 
 graphique_ui <- function(id, title, header, note, collapsed, i18n) {
+  
   ns <- NS(id)
   
   column(
@@ -148,15 +149,20 @@ graphique_server <- function(id, pre_plot, vvars, sim, gl, i18n) {
       }
     )
     ## tweet -------------------------
-    output$tweet <- renderUI(
+    output$tweet <- renderUI({
+      url1 <- i18n$t(r"(https://twitter.com/intent/tweet?text=Regardez%20cette%20simulation%20ofce.shinyapps.io/debtwatchr)")
+      url2 <- str_c(r"(/?id=)", sim()$uuid)
+      url3 <- r"(%20%40XTimbeau%20%40HeyerEric%20%40EllAurissergues%20%40OFCEParis)"
+      url <- str_c(url1, url2, url3)
       shinydashboardPlus::socialButton(
-        href = "https://twitter.com/intent/tweet?text=Regardez%20cette%20simulation%20https%3A//ofce.shinyapps.io/debtwatchr/?id={sim()$uuid}%20%40XTimbeau%20%40HeyerEric%20%40EllAurissergues%20%40OFCEParis" |> glue::glue(),
+        href = url,
         icon=icon_colored("twitter","#1DA1F2", size="xs")
       )
+    }
     )
     ## show btn ------------------------
     observe({
-      if (sim()$uuid == "")
+      if (is.null(sim())||sim()$uuid == "")
         return(NULL)
       shinyjs::show(id = "dwn_svg_bttn")
       shinyjs::show(id = "dwn_png_bttn")
