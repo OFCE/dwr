@@ -98,7 +98,7 @@ graphique_server <- function(id, pre_plot, vvars, sim, gl, i18n) {
             )+theme_minimal(base_family = "sans")
           }
           ,
-          width = 11.2, height = 5, units = "in"
+          width = 11.2, height = 5, units = "in", bg = "white"
         )
       }
     )
@@ -127,7 +127,7 @@ graphique_server <- function(id, pre_plot, vvars, sim, gl, i18n) {
               uuid = uuids
             )
           },
-          width = 11.2, height = 5, units = "in"
+          width = 11.2, height = 5, units = "in", bg="white"
         )
       }
     )

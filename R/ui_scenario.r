@@ -474,7 +474,13 @@ scenarii_server <- function(input, output, session, scenarii, scenarii_saved,
       mutate(saved = TRUE, graph = FALSE, actuel = TRUE)
     
     if(to_save$nom_fr=="AMECO 5/2021")
-      to_save <- to_save |> mutate(nom_fr = str_c("AMECO 5/2021 (", to_save$country, ")"), saved = TRUE)
+    {
+      to_save <- to_save |>
+        mutate(nom_fr = str_c("AMECO 5/2021 (", to_save$country, ")"), saved = TRUE)
+      scn <- scn |>
+        mutate(nom_fr = if_else(actuel, str_c("AMECO 5/2021 (", to_save$country, ")"), nom_fr))
+      scenarii(scn)
+    }
     
     scn_s <- scenarii_saved()
     if (to_save$uuid %in% scn_s$uuid) {

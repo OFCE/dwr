@@ -58,7 +58,7 @@ translation_en <- read.csv("data/translations/translation_en.csv", fileEncoding 
 # globals data -----------------------
 init_cty <- "FRA"
 init_sy <- 2022
-globals <- set_globals(init_cty, version = "1.0.1")
+globals <- set_globals(init_cty, version = "1.0.2")
 
 # equations -------------------
 # equations should be located in odin folder
@@ -622,11 +622,6 @@ server <- function(input, output, session) {
   )
   ## country_set ----------------------------
   observeEvent(list(input$country, querycount()), priority=2, {
-    
-    if(lang_chgt()) {
-      lang_chgt(FALSE) # vu
-      return(NULL)
-    }
     country <- input$country
     start <- input$start_year
     hist <- input$start_hist
@@ -662,7 +657,7 @@ server <- function(input, output, session) {
             relatif = FALSE, 
             index = dplyr::row_number()
           )
-        updatePrettyToggle(session=session, inputId = "relatif_actuel", value=FALSE)
+        updatePrettyToggle(session=session, inputId = "relatif_actuel", value=TRUE)
         iscn <- max(scn$index)
       } else {
         iscn <- 0
@@ -844,7 +839,6 @@ server <- function(input, output, session) {
         nom <- stringr::str_c(c_s$country, " #", sim_counter())
         updateTextInput(session = session, inputId = "nom_actuel", value = nom)
       }
-      
       new_record$is_precalc <- FALSE
       new_record$country <- c_s$country
       new_scenarii <- actuel2scenarii(new_record, scns, nom = nom, relatif = !input$relatif_actuel)

@@ -123,7 +123,7 @@ pre_plot_sim <- function(scn, sim, gl, i18n) {
   }
   
   # Un graphique generique
-  # browser()
+  
   gen <- function(var) {
     lty <- c(l1 = "solid", l2 = "dashed", l3 = "dotted", l4 = "dotdash", l5 = "longdash", l6 = "twodash")
     sim_all <- sim_all |>
