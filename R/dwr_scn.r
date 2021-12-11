@@ -28,7 +28,7 @@ actuel2scenarii <- function(record, scenarii, nom="", relatif=FALSE) {
   dplyr::bind_rows(scenarii, new)
 }
 
-get_scenario_preset <- function(country, globals, cache=TRUE, start_year = 2022, periods = 28, start_hist = 2007) {
+get_scenario_preset <- function(country, globals, cache=TRUE, start_year, periods, start_hist) {
   
   fncache <- "data/cache/scenarii_{country}.rda" |> glue::glue()
   
@@ -114,12 +114,15 @@ recalc_scenarii <- function(scn, end_year = NULL, start_year = NULL, start_hist 
     sh <- start_hist %||% .x$start_hist
     ey <- end_year %||% .x$end_year
     des_inputs <- purrr::list_modify(.x, start_year = sy, end_year = ey, start_hist = sh, periods = ey - sy)
+    ameco <- get_ameco(reset=FALSE, countries = globals$countries, variables = globals$variables, version = .x$ameco%||%"5/2021") |>
+      dplyr::mutate(ccode = globals$ivariables[code])
     dandp <- dataandparams(
       country = .y, 
       start_year = sy, 
       periods = ey - sy,
       draws = .x$draws, 
-      globals = globals
+      globals = globals,
+      ameco = ameco
     )
     pp <- set_params(des_inputs, globals = globals, datas = dandp)
     calc_sim_dust(params = pp$p, model = globals$model, history = pp$h)
@@ -131,6 +134,6 @@ recalc_scenarii <- function(scn, end_year = NULL, start_year = NULL, start_hist 
 reset_presets_cache <- function(globals) {
   walk(globals$pays$id , ~{
     print(.x)
-    presets <- calc_presets(country = .x, globals = globals, cache = FALSE)
+    presets <- calc_presets(country = .x, globals = globals, start_year=globals$start, start_hist=2007, cache = FALSE)
   })
 }

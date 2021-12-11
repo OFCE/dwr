@@ -16,14 +16,20 @@ library(stringr)
 library(purrr)
 library(svglite)
 library(ragg)
+library(showtext)
 
 options(shiny.useragg = TRUE)
 # les google fonts sont dans www, s'ils sont effacés passer les deux lignes suivantes
 # gfonts::setup_font("source-code-pro", output_dir="www")
 # gfonts::setup_font("source-sans-pro", output_dir="www")
-# gfonts::setup_font("nunito", output_dir="www")
+# gfonts::setup_font("roboto", output_dir="www")
 # purrr::walk(list.files("R/", "*.[r|R]"), ~ source("R/{.x}" |> glue::glue(), encoding = "UTF-8"))
 # options(shiny.reactlog = TRUE)
+
+# fonts 
+# # font_add_google("Roboto", "roboto")
+# # sysfonts::font_add_google("Source Sans Pro", "source-sans-pro")
+# showtext_auto()
 
 # Translation files
 # # read from xlsx data describing and documenting panels, variables, sliders, and so on
@@ -51,14 +57,16 @@ write.csv(
   fileEncoding = "UTF-8",
   row.names=FALSE)  
 
-i18n <- shiny.i18n::Translator$new(translation_csvs_path = "data/translations")
+i18n <- suppressWarnings(shiny.i18n::Translator$new(translation_csvs_path = "data/translations"))
 i18n$set_translation_language("fr")
 translation_en <- read.csv("data/translations/translation_en.csv", fileEncoding = "UTF-8")
 
 # globals data -----------------------
 init_cty <- "FRA"
 init_sy <- 2022
-globals <- set_globals(init_cty, version = "1.0.2")
+ameco_version <-  "11/2021"
+ameco_versions <- c("5/2021", "11/2021")
+globals <- set_globals(init_cty, version = "1.0.4", ameco_version=ameco_version)
 
 # equations -------------------
 # equations should be located in odin folder
@@ -68,7 +76,7 @@ globals$model <- odin.dust::odin_dust(
   options = odin::odin_options(target = "c", verbose =FALSE))
 # to recalculate all presets
 # reset_presets_cache(globals)
-presets <- calc_presets(country = init_cty, globals = globals)
+g_presets <- calc_presets(country = init_cty, globals = globals)
 # init_dp <- dataandparams(country = init_cty, start_year = init_sy, globals = globals)
 
 katex_equations <- HTML(paste(readLines("help/equation-katex.html"), collapse="\n"))
@@ -84,15 +92,24 @@ ui <- function(req) {
     shinyjs::useShinyjs(),
     includeCSS("www/css/sass.css"),
     includeCSS("www/css/collapse.css"),
+    includeScript("www/js/js-cookie.js"),
+    includeScript("www/js/get_cookie.js"),
     shinybusy::add_busy_bar(timeout=500, color="#B80000"),
-    #gfonts::use_font("nunito", "www/css/nunito.css"),
-    #gfonts::use_font("source-code-pro", "www/css/source-code-pro.css"),
+    gfonts::use_font("roboto", "www/css/roboto.css"),
+    gfonts::use_font("source-code-pro", "www/css/source-code-pro.css"),
     gfonts::use_font("source-sans-pro", "www/css/source-sans-pro.css"),
     title = "debtwatchr",
     
     tags$head(
       includeHTML("www/googleanalytics.html"),
       tags$style(type = "text/css", "text {font-family: sans-serif}"),
+      tags$script(
+        id = "Cookiebot",
+        src = "https://consent.cookiebot.com/uc.js",
+        `data-cbid` = "d47ae39c-39ee-46f3-9b10-478e2f19cdf2",
+        `data-blockingmode` = "auto",
+        type = "text/javascript"
+      ),
       # Meta tags to share on social media
       # Facebook & LinkedIn
       tags$meta(property = "og:title", content = "Debtwatch"),
@@ -264,7 +281,7 @@ ui <- function(req) {
             class="section-content",
             div(
               class = "scenarii-wrapper",
-              scenarii_panel(presets, globals, i18n)
+              scenarii_panel(globals, i18n)
             ) 
           )
         ), # div scenarios
@@ -292,7 +309,15 @@ ui <- function(req) {
                 content = div(
                   dwr_slider("start_hist", globals, i18n),
                   dwr_slider("start_year", globals, i18n),
-                  dwr_slider("end_year", globals, i18n)
+                  dwr_slider("end_year", globals, i18n),
+                  selectInputWrapper(
+                    inputId = "ameco",
+                    label = i18n$t("Version d’AMECO"),
+                    help_text = help_text("ameco", globals$sliders),
+                    value = ameco_version,
+                    choices = ameco_versions,
+                    selected = ameco_version
+                  )
                 )
               )
             ),
@@ -417,11 +442,17 @@ ui <- function(req) {
                 "Debtwatch permet de calculer la politique budgétaire pour atteindre une cible de dette.", 
                 tags$br(),
                 tags$a(tags$img(src="pdf-download.png"), 
+                       tags$small("fr"),
                        href="https://www.ofce.sciences-po.fr/pdf/pbrief/2021/OFCEpbrief93.pdf", 
                        download="OFCE policy brief 93 la dette publique au XXIe siecle.pdf"),
-                tags$small("Policy Brief de l'OFCE n°93, la dette publique au XXIe siècle"), 
+                tags$a(tags$small("en"), 
+                       href= "https://www.ofce.sciences-po.fr/pdf/pbrief/2021/OFCEpbrief96.pdf",
+                       download = "OFCE policy brief 96 Public Debt in the XXIst century.pdf"),
+                tags$small("Policy Brief de l'OFCE n°93, la dette publique au XXIe siècle"),
                 tags$br(),
-                tags$small("Debtwatch ©2021 Timbeau, Heyer, Aurissergues sous licence CeCIIL-B")
+                tags$img(src="new.png", width = 20, height = 20), tags$small("données AMECO hiver 2021 (11/11/2021)"),
+                tags$br(),
+                tags$small("Debtwatch ©2021 Timbeau, Heyer, Aurissergues sous licence CeCILL-B")
               ),
               tags$hr(),
               p(
@@ -529,6 +560,43 @@ server <- function(input, output, session) {
   # reactive values and val -----------------------
   scenarii <- reactiveVal(tibble::tibble())
   scenarii_saved <- reactiveVal(tibble::tibble())
+  presets <- reactiveVal(g_presets)
+  
+  # ------ * Feed scenarii_saved() with cookies --------------------------------
+  # input$scenarii is created from www/js/get_cookies.js
+  observeEvent(input$scenarii, {
+    all_scenarii <- strsplit(input$scenarii, ",")[[1]]
+    for (uuid in all_scenarii) {
+      p_found <- mongo_get_param(uuid, globals$mmg)
+      found <- tibble::tibble(
+        uuid = uuid,
+        nom_fr = str_c(p_found$country, " (log)"),
+        nom_en = "",
+        comment_fr = "",
+        comment_en = "",
+        country = p_found$country,
+        p = list(p_found),
+        pwr = list(p_found),
+        preset = FALSE,
+        actuel = FALSE,
+        saved = TRUE,
+        graph = FALSE,
+        index = 0,
+        sim = NULL
+      )
+      scn_s <- scenarii_saved()
+      scenarii_saved(bind_rows(scn_s, found))
+    }
+  })
+  
+  # ------ * Cookies: Load language --------------------------------------------
+  # input$lang is created from www/js/get_cookies.js
+  observeEvent(input$lang, {
+    if (input$lang == "en") {
+      shinyjs::click(id = "language_en")
+    }
+  })
+  
   querycount <- reactiveVal(0)
   lang_chgt <- reactiveVal(FALSE)
   force_uuid <- reactiveVal(
@@ -541,27 +609,6 @@ server <- function(input, output, session) {
     )
   )
   
-  # record a la même structure que sim (et est utilisé pour garder une mémoire)
-  # record <- reactiveVal(
-  #   list(
-  #     p = presets |> dplyr::filter(nom_fr == "AMECO 5/2021") |> dplyr::pull(pwr) |> purrr::pluck(1),
-  #     previous_p = NULL,
-  #     simulations = tibble::tibble(simulation = list()),
-  #     h = NULL,
-  #     df = tibble::tibble(),
-  #     start_year = 2022,
-  #     periods = 28,
-  #     country = "FRA",
-  #     uuid = presets |> dplyr::filter(nom_fr == "AMECO 5/2021" & country == "FRA") |> dplyr::pull(uuid),
-  #     rule_text = "",
-  #     no_log = presets |> dplyr::filter(nom_fr == "AMECO 5/2021" & country == "FRA") |> dplyr::pull(uuid),
-  #     is_precalc = TRUE,
-  #     seed = (presets |> dplyr::filter(nom_fr == "AMECO 5/2021" & country == "FRA") |> dplyr::pull(pwr) |> purrr::pluck(1))$seed,
-  #     uuid_found = NULL,
-  #     p_found = NULL
-  #   )
-  # )
-  
   record <- reactiveVal(
     list(
       p = NULL,
@@ -569,8 +616,8 @@ server <- function(input, output, session) {
       simulations = tibble::tibble(simulation = list()),
       h = NULL,
       df = tibble::tibble(),
-      start_year = 2022,
-      periods = 28,
+      start_year = globals$start,
+      periods = globals$periods,
       country = "FRA",
       uuid = "",
       rule_text = "",
@@ -599,7 +646,6 @@ server <- function(input, output, session) {
     start_year = NULL,
     periods = NULL
   )
-  
   # observe Event ----------------------------
   ## ------ * Conditions initiales (UI) -----------------------------------------
   # observeEvent(input$start_year, {
@@ -620,6 +666,7 @@ server <- function(input, output, session) {
   },
   priority = 1
   )
+  
   ## country_set ----------------------------
   observeEvent(list(input$country, querycount()), priority=2, {
     country <- input$country
@@ -628,15 +675,18 @@ server <- function(input, output, session) {
     periods <- input$end_year - start
     draws <- input$draws
     scn <- isolate(scenarii())
-    
-    if(is.null(country_set$country) || country_set$country != country) { 
+
+    if(is.null(country_set$country) || country_set$country != country) {
+      ameco <- get_ameco(reset=FALSE, countries = globals$countries, variables = globals$variables, input$ameco) |>
+        dplyr::mutate(ccode = globals$ivariables[code])
       
       dandp <- dataandparams(
         country = country,
         start_year = start,
         periods = periods,
         draws = draws,
-        globals = globals)
+        globals = globals,
+        ameco = ameco)
       
       country_set$p_init <- dandp$p_init
       country_set$p_def <- dandp$p_def
@@ -646,8 +696,9 @@ server <- function(input, output, session) {
       country_set$country <- dandp$country
       country_set$start_year <- dandp$start_year
       country_set$periods <- dandp$periods
+
       
-      new_presets <- calc_presets(country=country, globals, start_year = start_year, periods = periods)
+      new_presets <- calc_presets(country=country, globals, start_year = start, periods = periods) 
       if(nrow(scn)>0) {
         scn <- scn |> 
           filter(!preset) |>
@@ -665,21 +716,29 @@ server <- function(input, output, session) {
       
       new_presets <- new_presets |>
         mutate(index = iscn + dplyr::row_number())
+      presets(new_presets)
+      
       scn <- bind_rows(scn, new_presets)
       scenarii(scn)
       
+      scn_s <- scenarii_saved()
+      scn_s <- scn_s |> 
+        mutate(graph=FALSE)
+
+      scenarii_saved(scn_s)
+      
       if(force_uuid()$uuid=="") {
-        uuid_ameco <- scn |> 
-          dplyr::filter(nom_fr == "AMECO 5/2021" & country==!!country) |>
+        uuid_ameco <- scn |>
+          dplyr::filter(nom_fr == str_c("AMECO ", ameco_version) & country==!!country) |>
           dplyr::pull(uuid) |>
           purrr::pluck(1)
         
         if(!is.null(uuid_ameco)) {
           prms <- scn |>
-            dplyr::filter(nom_fr == "AMECO 5/2021" & country==!!country) |>
+            dplyr::filter(nom_fr == str_c("AMECO ", ameco_version) & country==!!country) |>
             dplyr::pull(pwr) |>
             purrr::pluck(1)
-          updateTextInput(session=session, "nom_actuel", value = i18n$t("AMECO 5/2021"))
+          updateTextInput(session=session, "nom_actuel", value = str_c("AMECO ", ameco_version))
           force_uuid(
             list(
               uuid = uuid_ameco,
@@ -704,7 +763,7 @@ server <- function(input, output, session) {
   
   # dates et périodes ----------------------------------------------
   observeEvent(list(input$start_hist, input$start_year), priority = 3, {
-    # dans ce cas freezé les values bloque tout
+    # dans ce cas freezer les values bloque tout
     updateSliderInput2(session=session, "start_year", min=input$start_hist+1)
     updateSliderInput2(session=session, "start_hist",  max=input$start_year-1)
     
@@ -718,6 +777,15 @@ server <- function(input, output, session) {
     )
     
   })
+  
+  observeEvent(list(input$ameco), priority = 3, {
+    dates <- get_ameco_date(input$ameco)
+    updateSliderInput2(session=session, "start_hist",  max=dates[["max"]]-1, min = dates[["min"]])
+    updateSliderInput2(session=session, "start_year", min=input$start_hist+1, value = dates[["max"]], max = dates[["max"]])
+    updateSliderInput2(session=session, "start_hist",  max=dates[["max"]]-1)
+    
+  })
+  
   # observeEvent(input$end_year, priority = 0, {
   #   freezeReactiveValue(input, "start_year")
   #   updateSliderInput2(session=session, "start_year", max=min(input$end_year-1, 2022))
@@ -731,6 +799,7 @@ server <- function(input, output, session) {
     les_inputs <- transform_params(input, globals)
     irr <- input$refreshrule
     isolate({ # on isolate à partir de là comme ça pas de mauvaise surprise
+      
       ar <- les_inputs$autorule
       tt <- i18n$t
       old_record <- record()
@@ -739,12 +808,15 @@ server <- function(input, output, session) {
       scns <- scenarii()
       scns <- scns |>
         dplyr::mutate(graph = dplyr::if_else(saved & actuel, FALSE, graph))
+      ameco <- get_ameco(reset=FALSE, countries = globals$countries, variables = globals$variables, les_inputs$ameco) |>
+        dplyr::mutate(ccode = globals$ivariables[code])
       c_s <- dataandparams(
         country = input$country, 
         start_year = input$start_year, 
         periods = input$end_year-input$start_year,
         draws=input$draws,
-        globals = globals
+        globals = globals,
+        ameco = ameco
       )
       rrefresh <- irr != old_record$irr || is.null(old_record$p$tpo_og) || ar
       pp <- set_params(les_inputs, globals, c_s)
@@ -788,7 +860,10 @@ server <- function(input, output, session) {
           globals$mmg)
       } else {
         new_record$uuid <- mongo_log(
-          new_record$df |> dplyr::slice_tail() |> dplyr::select(1:4),
+          new_record$df |>
+            dplyr::slice_tail() |>
+            dplyr::select(1:4) |>
+            mutate(ameco = les_inputs$ameco),
           globals$mmg,
           no_log = f_uuid$uuid)
       }
@@ -860,6 +935,7 @@ server <- function(input, output, session) {
     force_uuid(list(uuid = "", params = NULL, country = NULL, precalc = FALSE, ruleok=FALSE))
     scenarii(new_scenarii)
     record(new_record)
+    
     return(new_record)
   })
   
@@ -890,20 +966,20 @@ server <- function(input, output, session) {
   
   # scenarii panel ---------------------
   scenarii_server(
-    input, 
-    output, 
+    input,
+    output,
     session,
     scenarii,
-    scenarii_saved, 
+    scenarii_saved,
     record,
     simulation,
-    presets, 
+    presets,
     observers,
     force_uuid,
     querycount,
-    globals, 
+    globals,
     i18n)
-  
+
   # go plots -------------------
   pre_plot <- reactive(pre_plot_sim(scenarii(), simulation(), gl = globals, i18n = i18n))
   
@@ -990,11 +1066,17 @@ server <- function(input, output, session) {
           "Debtwatch permet de calculer la politique budgétaire pour atteindre une cible de dette.", 
           tags$br(),
           tags$a(tags$img(src="pdf-download.png"), 
+                 tags$small("fr"),
                  href="https://www.ofce.sciences-po.fr/pdf/pbrief/2021/OFCEpbrief93.pdf", 
                  download="OFCE policy brief 93 la dette publique au XXIe siecle.pdf"),
+          tags$a(tags$small("en"), 
+                 href= "https://www.ofce.sciences-po.fr/pdf/pbrief/2021/OFCEpbrief96.pdf",
+                 download = "OFCE policy brief 96 Public Debt in the XXIst century.pdf"),
           tags$small("Policy Brief de l'OFCE n°93, la dette publique au XXIe siècle"), 
           tags$br(),
-          tags$small("Debtwatch ©2021 Timbeau, Heyer, Aurissergues sous licence CeCIIL-B")
+          tags$img(src="new.png", width = 20, height = 20), tags$small("données AMECO hiver 2021 (11/11/2021)"),
+          tags$br(),
+          tags$small("Debtwatch ©2021 Timbeau, Heyer, Aurissergues sous licence CeCILL-B")
         )
       )
     )
@@ -1069,6 +1151,9 @@ server <- function(input, output, session) {
         "$('#{id}_tooltip').attr('data-original-title', '{title}')"
       ))
     }
+    
+    # Set cookies
+    shinyjs::runjs("Cookies.set('lang', 'fr', { expires: 365 })")
   })
   
   observeEvent(input$language_en, {
@@ -1094,11 +1179,17 @@ server <- function(input, output, session) {
           "Debtwatch computes fiscal policy to meet a public debt target.", 
           tags$br(),
           tags$a(tags$img(src="pdf-download.png"), 
+                 tags$small("fr"),
                  href="https://www.ofce.sciences-po.fr/pdf/pbrief/2021/OFCEpbrief93.pdf", 
                  download="OFCE policy brief 93 la dette publique au XXIe siecle.pdf"),
-          tags$small("OFCE Policy Brief #93 (fr), Public debt in the XXIst century"), 
+          tags$a(tags$small("en"), 
+                 href= "https://www.ofce.sciences-po.fr/pdf/pbrief/2021/OFCEpbrief96.pdf",
+                 download = "OFCE policy brief 96 Public Debt in the XXIst century.pdf"),
+          tags$small("OFCE Policy Brief #96, Public debt in the XXIst century"), 
           tags$br(),
-          tags$small("Debtwatch ©2021 Timbeau, Heyer, Aurissergues sous licence CeCIIL-B")
+          tags$img(src="new.png", width = 20, height = 20), tags$small("data from AMECO winter 2021 (11/11/2021)"),
+          tags$br(),
+          tags$small("Debtwatch ©2021 Timbeau, Heyer, Aurissergues under CeCILL-B licence")
         )
       )
     )
@@ -1173,6 +1264,9 @@ server <- function(input, output, session) {
         "$('#{id}_tooltip').attr('data-original-title', '{title}')"
       ))
     }
+
+    # Set cookies
+    shinyjs::runjs("Cookies.set('lang', 'en', { expires: 365 })")
   })
 }
 

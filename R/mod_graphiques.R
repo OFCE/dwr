@@ -89,13 +89,13 @@ graphique_server <- function(id, pre_plot, vvars, sim, gl, i18n) {
               pull(uuid)
             if(length(uuids)>1)
               uuids <- str_c(uuids, collapse = "-")
-            post_plot_sim(
+            plot <- post_plot_sim(
               pre_plot(),
               vvars,
               title = gl$panels$names[[id]],
               pays = gl$cty2code[[sim()$country]],
               uuid = uuids
-            )+theme_minimal(base_family = "sans")
+            )+theme(text = element_text("sans"))
           }
           ,
           width = 11.2, height = 5, units = "in", bg = "white"
@@ -125,9 +125,9 @@ graphique_server <- function(id, pre_plot, vvars, sim, gl, i18n) {
               title = gl$panels$names[[id]],
               pays = gl$cty2code[[sim()$country]],
               uuid = uuids
-            )
+            )+theme(text = element_text("sans"))
           },
-          width = 11.2, height = 5, units = "in", bg="white"
+          width = 11, height = 8, units = "in", bg="white", dpi = 72
         )
       }
     )
