@@ -16,14 +16,15 @@ forme_history <- function(data, probs = c(0.025, 0.5, 0.975)) {
     dplyr::arrange(year)
 }
 
-dataandparams <- function(country, start_year, periods = 2050-start_year, draws=100, globals) {
-  
-  country_list <- globals$ameco |> dplyr::distinct(country)
+dataandparams <- function(country, start_year, periods = 2050-start_year, draws=100, globals, ameco=NULL) {
+  if(is.null(ameco))
+    ameco <- globals$ameco
+  country_list <- ameco |> dplyr::distinct(country)
   
   countries <- set_names(globals$pays |> dplyr::pull(id))
   countries_ln_fr <- globals$pays |> dplyr::pull(nom_fr, name = id)
   
-  data <- globals$ameco |> 
+  data <- ameco |> 
     dplyr::filter(country==!!country, unit==0) |>
     dplyr::rename(var = ccode) |> 
     dplyr::select(-code, -TITLE, -COUNTRY, -`SUB-CHAPTER`, -UNIT, -csplit2, -csplit3, -unit, -is.prev, -country) |> 
@@ -63,7 +64,7 @@ dataandparams <- function(country, start_year, periods = 2050-start_year, draws=
   full_historical_data <- data |> 
     dplyr::transmute(year,
                      dettep = dette/vpib, r_app,
-                     spp, og, txppib, tpo, tdep, tdeppp, pibpot, qpib, tcho, tvnairu, gpib) |> 
+                     spp, og, txppib, tpo, tdep, tdeppp, pibpot, qpib, tcho, tvnairu, gpib, ec) |> 
     tidyr::drop_na(dettep)
   
   historical_data <- full_historical_data |> 
@@ -183,10 +184,10 @@ dataandparams <- function(country, start_year, periods = 2050-start_year, draws=
 }
 
 # dust_check_params
-dust_fix_params <- function(params) {
+dust_fix_params <- function(params, long = c( "dette_oneoff", "phi", "gpot", "taut", "tx_deriv_dep", "tx_deriv_po")) {
   long_exo <- params |> purrr::keep(~length(.x)>1) |> names()
   # pas moyen de récupérer cette liste de l'objet dust model
-  long_exo <- unique(c(long_exo, "dette_oneoff", "phi", "gpot", "taut", "tx_deriv_dep", "tx_deriv_po"))
+  long_exo <- unique(c(long_exo, long))
   ss <- purrr::map(
     rlang::set_names(long_exo), 
     ~{
@@ -200,10 +201,15 @@ dust_fix_params <- function(params) {
 
 # simulations ---------------
 
-calc_sim_dust <- function(params, model, probs=c(0.025, 0.5, 0.975), history = NULL) {
+calc_sim_dust <- function(params, model, probs=c(0.025, 0.5, 0.975), history = NULL, 
+                          long= c("dette_oneoff", "phi", "gpot", "taut", "tx_deriv_dep", "tx_deriv_po")) {
   p <- params
-  p <- dust_fix_params(p)
-  m <- model$new(pars=p, step=1, n_particles = p$draws, n_threads = 2, seed = as.integer(p$seed))
+  p <- dust_fix_params(p, long=long)
+  if(is.null(params$seed))
+    seed <- NULL
+  else
+    seed <- as.integer(params$seed)
+  m <- model$new(pars=p, step=1, n_particles = p$draws, n_threads = 2L, seed = seed)
   
   state_names <- names(m$info()$index)
   # les variables de sortie sont indicees par _o
@@ -260,10 +266,12 @@ medianloss1 <- function(params, model, controls, n_threads = 2) {
   return(log(res+lasso_loss))
 }
 
-medianloss2 <- function(params, model, controls=c("tpo_og", "tpo_dstar", "tpo_sstar"), n_threads = 2) {
+medianloss2 <- function(params, model, controls=c("tpo_og", "tpo_dstar", "tpo_sstar"), n_threads = 2L) {
   p <- params
+  p$seed <- NULL
   periods <- params$periods
-  m <- model$new(pars=p, step=1, n_particles = params$draws, n_threads = n_threads, seed = as.integer(p$seed))
+  seed  <- if(is.null(params$seed)) NULL else as.integer(params$seed) 
+  m <- model$new(pars=p, step=1, n_particles = params$draws, n_threads = n_threads, seed = seed)
   state_names <- names(m$info()$index)
   out_i <- which(state_names%in%c("loss_nd_o", "dettep_o"))
   m$set_index(out_i)
@@ -281,7 +289,7 @@ medianloss2 <- function(params, model, controls=c("tpo_og", "tpo_dstar", "tpo_ss
   loss_part1 <- sim$loss_nd_o[length(sim$loss_nd_o)]
   loss_part2 <- sum((sim$dettep_o[(params$loss_t+1):periods]-params$dstar)^2) * params$loss_d
   lasso_loss <- sum(purrr::as_vector(params[controls])^2) * params$loss_lasso
-  return(log(loss_part1 + loss_part2 + lasso_loss))
+  return(loss_part1 + loss_part2 + lasso_loss)
 }
 
 constrainedMedianLoss2 <- function(params, model, controls, ccont, n_threads = 2) {
@@ -409,13 +417,16 @@ add_previous <- function(ns, ps) {
 transform_params <- function(input, globals)
 {
   from_input <- map(set_names(names(globals$sliders)), ~{
-    if(globals$sliders[[.x]][["type"]]=="slider")
+    type <- globals$sliders[[.x]][["type"]]
+    if(type=="slider")
       return(input[[.x]]/globals$sliders[[.x]][["facteur"]])
-    if(globals$sliders[[.x]][["type"]]=="pick")
+    if(type=="pick")
       return(as.numeric(input[[.x]]))
-    if(globals$sliders[[.x]][["type"]]=="date")
+    if(type=="pick_str")
+      return(as.character(input[[.x]]))
+    if(type=="date")
       return(lubridate::year(input[[.x]]))
-    if(globals$sliders[[.x]][["type"]]=="check")
+    if(type=="check")
       return(as.logical(input[[.x]]))
   })
   return(from_input)
@@ -433,6 +444,7 @@ undo_transform <- function(p, globals) {
   purrr::list_modify(p, !!!undone)
 }
 
+# généralise l'opérateur %||%
 `%|||%` <- function (x, y) 
 {
   if (purrr::is_empty(x)) 
@@ -450,15 +462,14 @@ set_params <- function(inputs, globals, datas)
   p <- purrr::list_modify(p, periods=periods)
   p <- purrr::list_modify(p, !!!datas$p_init)
   p <- purrr::list_modify(p, !!!inputs)
-  # les ci calees
-  # if(s_y>globals$years[[2]]-2)
-  # {
+  
   dtpo <- inputs$i_tpo%|||%0
   dtdeppp <- inputs$i_tdeppp%|||%0
   p$i_tpo <- NULL
   p$i_tdeppp <- NULL
   p$i_lagtdeppp <- p$i_lagtdeppp%|||%0 + dtdeppp 
   p$i_lagtpo <- p$i_lagtpo%|||%0 + dtpo
+  
   # du coup on modifie l'historique
   history <- forme_history(
     datas$historical_data |> 
@@ -468,7 +479,9 @@ set_params <- function(inputs, globals, datas)
     rename(full_h = q0.5) 
   ses <- names(history |> dplyr::select(dplyr::starts_with("q0.", ignore.case = FALSE)) |> dplyr::select(-q0.5))
   names(ses) <- ses
+  
   identities <- purrr::map(ses, ~ function(x) x)
+  
   new <- history |> 
     dplyr::filter(year==s_y) |>
     dplyr::select(year, q0.5, variable) |> 
@@ -481,15 +494,13 @@ set_params <- function(inputs, globals, datas)
       ib_po = ib_po + dtpo) |> 
     tidyr::pivot_longer(cols=-year, values_to = "q0.5", names_to = "variable") |> 
     dplyr::mutate(dplyr::across(q0.5, .fns = identities, .names="{.fn}"))
+  
   history <- history |> 
     dplyr::rows_update(new, by=c("year","variable"))
-  # }
+  
   # le potentiel
   p$gpot <- rep(inputs$gpot_sj,periods)
   # les depenses publiques et les po
-  # dgdep <-  (1+inputs$gpot_sj) * ((1 + inputs$ddep/p$i_lagtdeppp)^0.1 - 1)
-  # dgpo <-  (1+inputs$gpot_sj) * ((1 + inputs$dtpo/p$i_lagtpo)^0.1 - 1)
-  
   p$tx_deriv_dep <- c(rep(inputs$ddep/10, min(10, periods)), rep(0, max(periods-10, 0)))
   p$tx_deriv_po <- c(rep(inputs$dtpo/10, min(10, periods)), rep(0, max(periods-10, 0)))
   
@@ -509,7 +520,7 @@ set_params <- function(inputs, globals, datas)
   ss <- purrr::map(rlang::set_names(long_exo), ~trimortrick(p[[.x]], periods))
   p <- purrr::list_modify(p, !!!ss)
   
-  return(list(p=p, h=history, fh=full_history, start_year=s_y, periods=periods, end_year = s_y + periods, start_hist = globals$years[[1]]))
+  return(list(p=p, h=history, fh=full_history, start_year=s_y, periods=periods, end_year = s_y + periods, start_hist = inputs$start_hist))
 }
 
 calc_rule_params <- function(globals, params, draws=5000) {
@@ -517,8 +528,8 @@ calc_rule_params <- function(globals, params, draws=5000) {
   # pour les lag ajouter "tpo_1dstar", "tpo_1sstar", "tpo_1og"
   # pour les termes quadratiques ajouter "tpo_dstar2", "tpo_sstar2", "tpo_og2"
   # on sort une expression avec la regle budgetaire prete a etre affichee
-  controls_c <- list(tpo_sstar = c(0.05 , 0.9), tpo_dstar = c(-0.2, -0.005), tpo_og = c(-1.5, 0))
-  controls <- purrr::map(controls_c, mean)
+  controls_c <- list(tpo_sstar = c(0.005 , 0.9), tpo_dstar = c(-0.4, -0.005), tpo_og = c(-1.5, 0))
+  controls <- purrr::map_dbl(controls_c, mean)
   par_fr <- best_FR_par(
     params, globals$model,
     controls = controls, 
@@ -656,4 +667,3 @@ best_FR_par_with_phi_only <- function(p, model, method="nlm", loss=medianloss2, 
   names(phi) <- NULL
   list_modify(list(phi = phi), !!!null_controls)
 }
-

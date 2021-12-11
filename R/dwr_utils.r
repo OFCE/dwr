@@ -9,21 +9,21 @@ log_params <- function(p, old_p, data, ts, ip) {
     dplyr::mutate(session_time = ts, ip = !!ip, called = nnow) |>
     dplyr::relocate(session_time, called, ip) |>
     dplyr::mutate(dplyr::across(where(is.list), function(l) purrr::map_chr(l, ~ stringr::str_c(.x, collapse = ","))))
-
+  
   pp$previous_p <- old_p$p
   pp$country <- data$country
   pp$start_year <- data$start_year
   pp$start_hist <- data$years[[1]]
   pp$df <- dplyr::bind_rows(p$df, pt)
-
+  
   return(pp)
 }
 
 check_params <- function(p) {
   if (is.null(p))
-   return(FALSE)
+    return(FALSE)
   if (length(names(p))==0)
-   return(FALSE)
+    return(FALSE)
   ok <- purrr::map_lgl(p, ~!is.null(.x))
   ok <- purrr::reduce(ok, `&`)
   return(ok)
@@ -41,16 +41,16 @@ f2si2 <- function(number, rounding = TRUE, digits = 1, unit = "median") {
   )
   ix <- ifelse(number != 0, findInterval(number, lut), 9L)
   ix <- switch(unit,
-    median = median(ix, na.rm = TRUE),
-    max = max(ix, na.rm = TRUE),
-    multi = ix
+               median = median(ix, na.rm = TRUE),
+               max = max(ix, na.rm = TRUE),
+               multi = ix
   )
   if (rounding == TRUE) {
     scaled_number <- round(number / lut[ix], digits)
   } else {
     scaled_number <- number / lut[ix]
   }
-
+  
   sistring <- paste0(scaled_number, pre[ix])
   sistring[scaled_number == 0] <- "0"
   return(sistring)
@@ -72,10 +72,9 @@ listify <- function(tibble, name="id") {
   map(set_names(split(tibble, 1:nrow(tibble)), tibble[[name]]), as.list)
 }
 
-set_globals <- function(country = "FRA", version = "0.1") {
+set_globals <- function(country = "FRA", version = "0.1", ameco_version="5/2021") {
   # les variables utilisées par le modèle
   # Attention à la concordance des noms (!!)
-  # Il reste un pb pour le Japon
   variables <- c(
     pibpot = "OVGDP", og = "AVGDGP", ppib = "PVGD", vpib = "UVGD", qpib = "OVGD",
     dette = "UDGG", oneoff = "UDGGS", ci = "UYIGE", dep_prim = "UUCGI", rec_po = "UTTT",
@@ -91,13 +90,13 @@ set_globals <- function(country = "FRA", version = "0.1") {
   sim_inputs <- fsliders$id
   countries <- purrr::keep(names(defaults), ~ stringr::str_detect(.x, "[:upper:]{3}"))
   # on lit les données (préchargées sinon, on les télécharge)
-  ameco <- get_ameco(variables = variables, countries = countries) |>
+  ameco <- get_ameco(variables = variables, countries = countries, version = ameco_version)  |>
     dplyr::mutate(ccode = icodes[code])
   cn_year <- ameco |> filter(year == max(year[!is.prev])) |> distinct(year) |> pull(year)
   # on met en forme les données
   tmp <- list(ameco = ameco, defaults = defaults, pays = pays)
-  dp <- dataandparams(country = country, start_year = 2022, periods = 29, globals = tmp)
-
+  dp <- dataandparams(country = country, start_year = max(ameco$year), periods = 2050-max(ameco$year), globals = tmp)
+  
   panels <-  NULL
   panels$ids <- fpanels$id
   panels$names <- rlang::set_names(fpanels$name_fr, panels$id)
@@ -108,10 +107,10 @@ set_globals <- function(country = "FRA", version = "0.1") {
     fpanels$var_2,
     ~ (if (is.na(..2)) ..1 else c(..1, ..2))
   )
-
+  
   panels$collapsed <- rlang::set_names(fpanels$collapsed, panels$id)
   names(panels$vars) <- panels$ids
-
+  
   bp <- paletteer::paletteer_d("miscpalettes::brightPastel")
   vars <- NULL
   vars$ids <- fvars$id
@@ -121,13 +120,15 @@ set_globals <- function(country = "FRA", version = "0.1") {
   
   # les sliders
   sliders <- listify(fsliders)
-
+  
   # résultat final
   list(
     ts = lubridate::now("Europe/Paris"),
     variables = variables,
+    ivariables = icodes,
     country = country,
     ameco = ameco,
+    ameco_version = ameco_version,
     cn_year =cn_year,
     params = dp$params,
     p_def = dp$p_def,
@@ -136,14 +137,14 @@ set_globals <- function(country = "FRA", version = "0.1") {
     init = dp$init,
     years = dp$years,
     start = dp$start_year,
-    periods = 29,
+    periods = dp$periods,
     countries = countries,
     pays = pays,
     flags = purrr::map_chr(
       set_names(
         countrycode::countrycode(countries, origin = "iso3c", destination = "iso2c"), 
         countries),
-      ~ glue::glue("https://www.countryflags.io/{.x}/flat/16.png")
+      ~ glue::glue("flags/{tolower(.x)}.png")
     ),
     code2cty = rlang::set_names(dp$countries, dp$countries_ln_fr),
     cty2code = rlang::set_names(dp$countries_ln_fr, dp$countries),
@@ -157,18 +158,18 @@ set_globals <- function(country = "FRA", version = "0.1") {
   )
 }
 
-download_ameco <- function() {
-  download.file("http://ec.europa.eu/economy_finance/db_indicators/ameco/documents/ameco0.zip", destfile = "./data/latest_ameco.zip")
-  ameco <- unzip("data/latest_ameco.zip", exdir = "./data/tmp")
+download_ameco <- function(url) {
+  download.file(url, destfile = "./data/ameco.zip")
+  ameco <- unzip("data/ameco.zip", exdir = "./data/tmp")
   dt <- data.table::rbindlist(purrr::map(ameco, ~ {
     ff <- try(data.table::fread(.x), silent = TRUE)
     if ("try-error" %in% class(ff)) {
-      print("Erreur en lisant {.x} de latest_ameco" |> glue::glue())
+      print("Erreur en lisant {.x} de ameco" |> glue::glue())
       ff <- data.table::data.table()
     }
     ff
   }), fill = TRUE)
-  file.remove("./data/latest_ameco.zip")
+  file.remove("./data/ameco.zip")
   unlink("./data/tmp", recursive = TRUE)
   code_split <- stringr::str_split(dt$CODE, "\\.")
   code <- purrr::map_chr(code_split, ~ .x[[6]])
@@ -197,22 +198,48 @@ download_ameco <- function() {
   dt
 }
 
-get_ameco <- function(reset = FALSE, countries = list("FRA"), variables = list("OVGD")) {
-  freset <- !file.exists("data/ameco.rds")
+get_ameco <- function(reset = FALSE, countries = list("FRA"), variables = list("OVGD"), version = "5/2021") {
+  version <- str_remove(version, "/")
+  ameco_url <- c(
+    "52021"  = "https://ec.europa.eu/info/sites/default/files/economy-finance/ameco_spring2021.zip",
+    "112021" = "https://ec.europa.eu/economy_finance/db_indicators/ameco/documents/ameco0.zip"
+  )
+  
+  freset <- !file.exists("data/ameco_{version}.rds" |> glue())
   if (freset | reset) {
-    dt <- download_ameco() |>
+    dt <- download_ameco(url = ameco_url[version]) |>
       dplyr::filter(country %in% !!countries, code %in% !!variables)
-    saveRDS(dt, file = "data/ameco.rds")
+    saveRDS(dt, file = "data/ameco_{version}.rds" |> glue())
   } else {
-    dt <- readRDS("data/ameco.rds")
+    dt <- readRDS("data/ameco_{version}.rds" |> glue())
     freset <- !(setequal(unique(dt$country), countries) && setequal(unique(dt$code), variables))
     if (freset) {
-      dt <- download_ameco() |>
+      dt <- download_ameco(url = ameco_url[version]) |>
         dplyr::filter(country %in% !!countries, code %in% !!variables)
-      saveRDS(dt, file = "data/ameco.rds")
+      saveRDS(dt, file = "data/ameco_{version}.rds" |> glue())
     }
   }
   dt
+}
+
+get_ameco_date <- function(version = "5/2021") {
+  if(is.null(version)) version <- "5/2021"
+  version <- str_remove(version, "/")
+  if(!file.exists("data/ameco_{version}.rds" |> glue()))
+    return(NULL)
+  dt <- readRDS("data/ameco_{version}.rds" |> glue())
+  prev <- dt |> 
+    filter(is.prev) |> 
+    summarise(min = min(year, na.rm=TRUE),
+              max = max(year, na.rm=TRUE))
+  extremes <- dt |> 
+    group_by(code) |> 
+    summarise(min = min(year, na.rm=TRUE),
+               max = max(year, na.rm=TRUE))
+  return(list(min = max(extremes$min, na.rm=TRUE),
+           max = max(extremes$max, na.rm=TRUE),
+           cn = prev$min-1,
+           prev = list(prev$min:prev$max)))
 }
 
 setSliderStyle <- function(sliderId, color = "grey50", bgcolor = "grey80", size = "12px", weight = "normal") {
@@ -247,7 +274,7 @@ slid <- function(label, size = "14px", weight = "normal") {
   tags$p(label, style = glue::glue("font-size: {size}; font-weight: {weight};"))
 }
 
- getIPcaller <- function(req) {
+getIPcaller <- function(req) {
   div(
     style = "display: none;",
     textInput(
@@ -264,7 +291,7 @@ slid <- function(label, size = "14px", weight = "normal") {
 countries_with_flag <- function(c2c, flags) {
   list(
     content = purrr::map(c2c, ~{
-      HTML(paste(tags$img(src = flags[[.x]], width = 20, height = 18), set_names(names(c2c), c2c) [[.x]]))
+      HTML(paste(tags$img(src = flags[[.x]], width = 18, height = 12), set_names(names(c2c), c2c) [[.x]]))
     })
   )
 }
@@ -314,7 +341,7 @@ getLetterID <- function(i, file = "data/UUIDletters.csv") {
   purrr::map_chr(i, ~ data.table::fread(file, skip = .x - 1, nrows = 1)[[1]])
 }
 
-# génère 500 000 identifiants uniques à 4 lettres
+# génère 500 000 identifiants uniques à 5 lettres
 # uniqueletterids <- sample.int(26^5, size=26^5/2-1, useHash = TRUE) |> letterID(n=5)
 # data.table::fwrite(uniqueletterids |> as.data.frame(), "data/UUIDletters.csv")
 # Si ca ne suffit pas on ajoutera une lettre

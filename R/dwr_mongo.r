@@ -98,14 +98,16 @@ mongo_log <- function(ddf, mmg, no_log="") {
 
 mongo_get_param <- function(uuid, mmg) {
   if(is.null(mmg)) {
-    logs <- qs::qread("logs.rda")
+    p <- qs::qread("logs.rda")
+    uuid_idx <- which(p[[1]] == uuid)[1]
+    p <- lapply(p, `[[`, uuid_idx)
   }
   else {
     db <- mongolite::mongo(collection = mmg$col, url = sprintf("mongodb+srv://%s:%s@%s/%s", mmg$username,
                                                                mmg$password, mmg$host, mmg$database),
                            options = mongolite::ssl_options(weak_cert_validation = TRUE))
     p <- db$find(query='{"uuid" : "[uuid]" }' |> glue::glue(.open="[", .close="]"))
-    if(nrow(p)>1)
+    if(nrow(p)!=1)
       return(NULL)
   }
   
@@ -126,6 +128,8 @@ mongo_get_param <- function(uuid, mmg) {
           }
       })
   )
+  if(is.null(p$ameco))
+    p$ameco <- "5/2021"
   return(p)
 }
 

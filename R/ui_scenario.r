@@ -41,7 +41,7 @@ smalldownloadBttn <- function(outputId, style = "minimal",
 }
 
 set_dwrsliders <- function(params, globals, session, input) {
-
+  
   params <- undo_transform(params, globals)
   params$autorule <- TRUE
   params$country <- NULL # attention, le pays ne sera pas modifié donc
@@ -55,7 +55,7 @@ set_dwrsliders <- function(params, globals, session, input) {
 
 # ui ----------------------
 
-scenarii_panel <- function(presets, globals, i18n) {
+scenarii_panel <- function(globals, i18n) {
   div(
     class = "parametres-wrapper",
     tags$style(
@@ -111,48 +111,10 @@ scenarii_panel <- function(presets, globals, i18n) {
           i18n$t("Scénarios prédéfinis"),
           style = "padding-top:0.5em"
         )
-      ),
-      ## presets -----------------------
-      tagList(
-        purrr::map(
-          1:nrow(presets),
-          ~ tags$tr(
-            style = "padding-top:0em",
-            tags$td(
-              i18n$t(presets[.x, ]$nom_fr),
-              style = "font-size:12px;"
-            ),
-            tags$td(
-              presets[.x, ]$uuid,
-              style = "font-size:12px;"
-            ),
-            tags$td(
-              shinyWidgets::prettyToggle(
-                inputId = stringr::str_c("graph_preset_", .x),
-                value = FALSE, inline = TRUE,
-                label_on = NULL,
-                label_off = NULL,
-                outline = FALSE,
-                plain = TRUE,
-                icon_on = small_eye,
-                icon_off = small_noeye,
-                status_on = "default",
-                status_off = "default"
-              )
-            ),
-            tags$td(
-              shinyWidgets::actionBttn(
-                stringr::str_c("upload_preset_", .x),
-                label = NULL,
-                icon = icon_colored("sliders-h", "#111111", size = "xs"),
-                size = "xs",
-                style = "minimal"
-              )
-            )
-          )
-        )
       )
     ),
+    ## presets -----------------------
+    uiOutput("panel_presets"),
     tags$table(
       style = "width:100%; table-layout:fixed; font-size:12px;border-spacing: 0",
       tag5col,
@@ -253,10 +215,155 @@ scenarii_server <- function(input, output, session, scenarii, scenarii_saved,
   tt <- i18n$t
   output$uuid <- renderText(sim()$uuid)
   outputOptions(output, "uuid", suspendWhenHidden = FALSE)
+  
+  # panel_presets ---------------------------
+  output$panel_presets <- renderUI({
+    
+    rows_HTML <- tagList(
+      purrr::map(
+        1:nrow(presets()),
+        ~ tags$tr(
+          style = "padding-top:0em",
+          tags$td(
+            i18n$t(presets()[.x, ]$nom_fr),
+            style = "font-size:12px;"
+          ),
+          tags$td(
+            presets()[.x, ]$uuid,
+            style = "font-size:12px;"
+          ),
+          tags$td(
+            shinyWidgets::prettyToggle(
+              inputId = stringr::str_c("graph_preset_", .x),
+              value = FALSE, inline = TRUE,
+              label_on = NULL,
+              label_off = NULL,
+              outline = FALSE,
+              plain = TRUE,
+              icon_on = small_eye,
+              icon_off = small_noeye,
+              status_on = "default",
+              status_off = "default"
+            )
+          ),
+          tags$td(
+            shinyWidgets::actionBttn(
+              stringr::str_c("upload_preset_", .x),
+              label = NULL,
+              icon = icon_colored("sliders-h", "#111111", size = "xs"),
+              size = "xs",
+              style = "minimal"
+            )
+          )
+        )
+      )
+    )
+    obss <- isolate(observers())
+    old_obss <- str_detect(names(obss), "preset")
+    obss[old_obss] <- NULL
+    purrr::walk(1:nrow(presets()), ~ {
+      g_name <- stringr::str_c("graph_preset_", .x)
+      obss[[g_name]] <<- observeEvent(input[[g_name]], ignoreInit = TRUE, {
+        scn <- scenarii()
+        if(nrow(scn)>0) {
+          scn <- scn |>
+            dplyr::mutate(graph = dplyr::if_else(uuid == presets()[.x, ]$uuid & preset, input[[stringr::str_c("graph_preset_", .x)]], graph))
+          if(nrow(scn |> filter(graph))<2) {
+            scn |> mutate(relatif=FALSE)
+            updatePrettyToggle(session = session, inputId = "relatif_actuel", value=TRUE)
+          }
+          scenarii(scn)
+        }
+      })
+      
+      ## upload presets -------------------
+      u_name <- stringr::str_c("upload_preset_", .x)
+      obss[[u_name]] <<- observeEvent(input[[stringr::str_c("upload_preset_", .x)]], ignoreInit = TRUE, {
+        scn <- scenarii()
+        le_uuid <- presets()[.x, ]$uuid
+        if (record()$uuid == le_uuid) {
+          return(NULL)
+        }
+        le_nom <- presets()[.x, ]$nom_fr
+        
+        # on charge le scénario dans actuel
+        p_actuel <- scn |>
+          dplyr::filter(uuid == le_uuid) |>
+          dplyr::pull(pwr) |>
+          purrr::flatten()
+        p_actuel <- purrr::list_modify(
+          p_actuel,
+          uuid = purrr::zap(),
+          ip = purrr::zap(),
+          called = purrr::zap(),
+          session_time = purrr::zap()
+        )
+        # on met les paramètres dans force_uuid
+        tt <- i18n$t
+        if (uuid_is_ok(le_uuid, globals$mmg)) {
+          force_uuid(
+            list(
+              uuid = le_uuid,
+              params = p_actuel,
+              country = p_actuel$country,
+              precalc = TRUE,
+              ruleok = TRUE
+            )
+          )
+          message <- "{tt('Scénario')} {le_uuid}, '{le_nom}' {tt('chargé dans les sliders')}" |> glue::glue()
+        } else {
+          force_uuid(
+            list(
+              uuid = "",
+              params = p_actuel,
+              country = presets()[.x, ]$country,
+              precalc = FALSE,
+              ruleok = FALSE
+            )
+          )
+          message <- "{tt(le_nom)} {tt('chargé dans les sliders')}" |> glue::glue()
+        }
+        querycount(querycount() + 1)
+        shinyWidgets::updatePrettyToggle(
+          session = session,
+          inputId = stringr::str_c("graph_preset_", .x),
+          label = NULL,
+          value = FALSE
+        )
+        shinyWidgets::updatePrettyToggle(
+          session = session,
+          inputId = stringr::str_c("graph_actuel_", .x),
+          label = NULL,
+          value = TRUE
+        )
+        
+        updateTextInput(inputId = "nom_actuel", value = tt(le_nom))
+        showNotification(message, type = "message")
+        rec <- record()
+        record(
+          purrr::list_modify(
+            rec,
+            uuid = le_uuid,
+            no_log = le_uuid,
+            is_precalc = force_uuid()$precalc,
+            seed = p_actuel$seed
+          )
+        )
+      })
+    })
+    observers(obss)
+    
+    tags$table(
+      style = "width:100%; table-layout:fixed; font-size:12px;border-spacing: 0",
+      tag5col,
+      rows_HTML
+    )
+  })
+  outputOptions(output, "panel_presets", suspendWhenHidden = FALSE)
+  
   # panel_saved ---------------------------
   output$panel_saved <- renderUI({
     scn_s <- scenarii_saved()
-    
     obss <- isolate(observers())
     if (nrow(scn_s) > 0) {
       rows_HTML <-
@@ -338,15 +445,17 @@ scenarii_server <- function(input, output, session, scenarii, scenarii_saved,
                   scn_s |> filter(uuid==uuid_s) |> mutate(sim = list(sim))
                 )
               }
-              scn <- scn |>
-                dplyr::mutate(
-                  graph = dplyr::if_else(uuid == uuid_s, input[[stringr::str_c("graph_saved_", uuid_s)]], graph)
-                )
-              if(nrow(scn |> filter(graph))<2) {
-                scn |> mutate(relatif=FALSE)
-                updatePrettyToggle(session=session, inputId = "relatif_actuel", value=TRUE)
+              if(nrow(scn)>0) {
+                scn <- scn |>
+                  dplyr::mutate(
+                    graph = dplyr::if_else(uuid == uuid_s, input[[stringr::str_c("graph_saved_", uuid_s)]], graph)
+                  )
+                if(nrow(scn |> filter(graph))<2) {
+                  scn |> mutate(relatif=FALSE)
+                  updatePrettyToggle(session=session, inputId = "relatif_actuel", value=TRUE)
+                }
+                scenarii(scn)
               }
-              scenarii(scn)
               scn_s <- scenarii_saved()
               scn_s <- scn_s |>
                 dplyr::mutate(
@@ -438,11 +547,9 @@ scenarii_server <- function(input, output, session, scenarii, scenarii_saved,
         }
       )
       observers(obss)
-
     } else {
       rows_HTML <- tags$tr(tags$td(tt("pas de scénarii enregistrés")))
     }
-    
     tags$table(
       style = "width:100%; table-layout:fixed; font-size:12px;border-spacing: 0",
       tag5col,
@@ -494,99 +601,24 @@ scenarii_server <- function(input, output, session, scenarii, scenarii_saved,
       session = session, type = "message", duration = 5
     )
   })
+  
+  # Save scenario in cookies-------------------
+  observeEvent(scenarii_saved(), {
+    
+    if (nrow(scenarii_saved()) > 0) {
+      shinyjs::runjs(paste0(
+        "Cookies.set('scenarii', '",
+        paste0(scenarii_saved()$uuid, collapse = ","),
+        "', { expires: 365 })"
+      ))
+    }
+  })
+  
   # change le nom -------------------
   observeEvent(input$nom_actuel, ignoreInit = TRUE, {
     scn <- scenarii()
     scn <- scn |> dplyr::mutate(nom_fr = dplyr::if_else(actuel, input$nom_actuel, nom_fr))
     scenarii(scn)
-  })
-  
-  # les presets ---------------
-  purrr::walk(1:nrow(presets), ~ {
-    observeEvent(input[[stringr::str_c("graph_preset_", .x)]], ignoreInit = TRUE, {
-      scn <- scenarii()
-      scn <- scn |>
-        dplyr::mutate(graph = dplyr::if_else(uuid == presets[.x, ]$uuid & preset, input[[stringr::str_c("graph_preset_", .x)]], graph))
-      if(nrow(scn |> filter(graph))<2) {
-        scn |> mutate(relatif=FALSE)
-        updatePrettyToggle(session = session, inputId = "relatif_actuel", value=TRUE)
-      }
-      scenarii(scn)
-
-    })
-    ## upload presets -------------------
-    observeEvent(input[[stringr::str_c("upload_preset_", .x)]], ignoreInit = TRUE, {
-      scn <- scenarii()
-      le_uuid <- presets[.x, ]$uuid
-      if (record()$uuid == le_uuid) {
-        return(NULL)
-      }
-      le_nom <- presets[.x, ]$nom_fr
-      
-      # on charge le scénario dans actuel
-      p_actuel <- scn |>
-        dplyr::filter(uuid == le_uuid) |>
-        dplyr::pull(pwr) |>
-        purrr::flatten()
-      p_actuel <- purrr::list_modify(
-        p_actuel,
-        uuid = purrr::zap(),
-        ip = purrr::zap(),
-        called = purrr::zap(),
-        session_time = purrr::zap()
-      )
-      # on met les paramètres dans force_uuid
-      tt <- i18n$t
-      if (uuid_is_ok(le_uuid, globals$mmg)) {
-        force_uuid(
-          list(
-            uuid = le_uuid,
-            params = p_actuel,
-            country = p_actuel$country,
-            precalc = TRUE,
-            ruleok = TRUE
-          )
-        )
-        message <- "{tt('Scénario')} {le_uuid}, '{le_nom}' {tt('chargé dans les sliders')}" |> glue::glue()
-      } else {
-        force_uuid(
-          list(
-            uuid = "",
-            params = p_actuel,
-            country = presets[.x, ]$country,
-            precalc = FALSE,
-            ruleok = FALSE
-          )
-        )
-        message <- "{tt(le_nom)} {tt('chargé dans les sliders')}" |> glue::glue()
-      }
-      querycount(querycount() + 1)
-      shinyWidgets::updatePrettyToggle(
-        session = session,
-        inputId = stringr::str_c("graph_preset_", .x),
-        label = NULL,
-        value = FALSE
-      )
-      shinyWidgets::updatePrettyToggle(
-        session = session,
-        inputId = stringr::str_c("graph_actuel_", .x),
-        label = NULL,
-        value = TRUE
-      )
-      
-      updateTextInput(inputId = "nom_actuel", value = tt(le_nom))
-      showNotification(message, type = "message")
-      rec <- record()
-      record(
-        purrr::list_modify(
-          rec,
-          uuid = le_uuid,
-          no_log = le_uuid,
-          is_precalc = force_uuid()$precalc,
-          seed = p_actuel$seed
-        )
-      )
-    })
   })
   
   ## find -------------------

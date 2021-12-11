@@ -144,11 +144,11 @@ ib_sup <- max(min(ib_fr, ibcap), -ibcap)
 ib_spont_dep <- tx_deriv_dep[step] * lagtdeppp +
   lagtdeppp * (lagppib_dep*lagpibpot_dep / lagpibpot / lagppib - lag2ppib_dep * lag2pibpot_dep/ lag2pibpot / lag2ppib)
 ib_dep <- ib_spont_dep + (1-pcpo) * ib_sup 
-tdeppp <- lagtdeppp + ib_dep/lagtdeppp
+tdeppp <- lagtdeppp + ib_dep
 
 ib_spont_po <-  - tx_deriv_po[step] * lagtpo
 ib_po <- ib_spont_po + pcpo * ib_sup
-tpo <- lagtpo - ib_po/lagtpo
+tpo <- lagtpo - ib_po
 
 # fonction de perte ----------------------
 # utilisée pour la partie optimisation

@@ -13,7 +13,7 @@ pre_plot_sim <- function(scn, sim, gl, i18n) {
     unlist(recursive = FALSE)
   autre_sim <- scn |>
     dplyr::filter(index != max(index))
-  cn_year <- gl$cn_year
+  cn_year <- get_ameco_date(sim_principale$p$ameco)$cn
   start_year <- sim_principale$p$start_year
   start_hist <- sim_principale$p$start_hist
   year_dette <- sim_principale$p$loss_t + start_year
@@ -22,6 +22,9 @@ pre_plot_sim <- function(scn, sim, gl, i18n) {
   sim_p  <- sim_principale$sim |>
     left_join(sim$fh, by=c("variable", "year")) |> 
     dplyr::mutate(
+      cn_year = !!cn_year,
+      start_year = !!start_year,
+      year_dette = !!year_dette,
       nom_fr = sim_principale$nom_fr,
       scn_index = 1,
       label = i18n$t(gl$vars$label[variable]),
@@ -63,18 +66,26 @@ pre_plot_sim <- function(scn, sim, gl, i18n) {
   se <- length(se_names) > 0
   
   alt_sim_i <- autre_sim$index
+
   sim_alt <- purrr::pmap(
     list(
       autre_sim$nom_fr,
       autre_sim$sim,
       autre_sim$index,
-      autre_sim$uuid
+      autre_sim$uuid,
+      map(autre_sim$p, function(p) get_ameco_date(p[["ameco"]]%||%"5/2021")),
+      map(autre_sim$p, "start_year"),
+      map(autre_sim$p, "loss_t")
     ),
     ~ dplyr::mutate(
       .data = ..2,
       nom_fr = ..1,
       index = ..3,
-      uuid = ..4
+      uuid = ..4,
+      cn_year = ..5$cn,
+      start_year = ..6,
+      year_dette = ..6 + ..7
+      
     )
   ) |>
     dplyr::bind_rows()
@@ -261,18 +272,23 @@ pre_plot_sim <- function(scn, sim, gl, i18n) {
       graph_fh +
       ggplot2::scale_colour_manual(values = color_scale, aesthetics = c("colour", "fill")) +
       ggplot2::scale_linetype_manual(values = lty) +
-      ggplot2::theme_minimal(base_family = "source-sans-pro", base_size = 14) +
+      ggplot2::theme_minimal(base_family = "sans") +
+      ggplot2::scale_x_continuous(breaks=sort(unique(c(start_hist, start_year, seq(round(start_hist/10)*10,end_year, 10)))))+
       ggplot2::xlab("") +
       ggplot2::ylab("")
   }
   
   # uniquement pour les images enregistrées
-  decoration <- function(title, pays, uuid) {
+  amecs <-  str_c("AMECO ", str_c(map(scn$p, "ameco"), collapse=", "))
+  uuids <- str_c(scn$uuid, collapse=", ")
+  decoration <- function(title, pays) {
     ggplot2::labs(
       title = stringr::str_c(title, ", ", pays),
       caption = stringr::str_c(
-        "Source: AMECO 5/2021, OFCE Debtwatch, ofce.shinyapps.io/debtwatchr\nuuid:",
-        uuid
+        "Source: ",
+        amecs,
+        " OFCE Debtwatch, ofce.shinyapps.io/debtwatchr\nuuid:",
+        uuids
       )
     )
   }
@@ -332,10 +348,10 @@ post_plot_sim <- function(gen, var, title = NULL, pays = NULL, uuid = NULL, box_
         ggplot2::annotate(
           "text",
           x = gen$minyear + 1,
-          y = gen$dstar*1.05,
+          y = gen$dstar*1.025,
           label = glue::glue("d*={signif(gen$dstar*100,3)}%"),
           hjust = 0,
-          size = 4
+          size = 3.5
         ))
       else NULL
     )
@@ -356,7 +372,7 @@ post_plot_sim <- function(gen, var, title = NULL, pays = NULL, uuid = NULL, box_
           y = gen$nairu+0.0025,
           label = glue::glue("Nairu={signif(gen$nairu*100,2)}%"),
           hjust = 0,
-          size = 4
+          size = 3.5
         ),
         ggplot2::geom_hline(yintercept = gen$nairu, col = "black", size = 0.5, linetype = "dotted")
       )
@@ -375,7 +391,7 @@ post_plot_sim <- function(gen, var, title = NULL, pays = NULL, uuid = NULL, box_
           y = gen$spstar + 0.01,
           label = glue::glue("s*={signif(gen$spstar*100,3)}%"),
           hjust = 0,
-          size = 4
+          size = 3.5
         )
       )
       else NULL
@@ -403,7 +419,7 @@ post_plot_sim <- function(gen, var, title = NULL, pays = NULL, uuid = NULL, box_
             y = gen$infstar + 0.0025,
             label = glue::glue("i*={signif(gen$infstar*100,3)}%"),
             hjust = 1,
-            size = 4
+            size = 3.5
           )
         )
       else
@@ -427,16 +443,16 @@ post_plot_sim <- function(gen, var, title = NULL, pays = NULL, uuid = NULL, box_
           y = gen$gstar + 0.015,
           label = glue::glue("g*={signif(gen$gstar*100,3)}%"),
           hjust = 1,
-          size = 4
+          size = 3.5
         )
       )
       else NULL
     )
   }
-  
+
   g <- g + add_g
   if (!is.null(uuid)) {
-    g <- g + gen$decoration(title = title, pays = pays, uuid = uuid)
+    g <- g + gen$decoration(title = title, pays = pays)
   }
   if(gen$anchor)
     g <-  g +  ggplot2::scale_y_continuous(labels = scales::label_percent(0.1))

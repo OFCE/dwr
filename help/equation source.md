@@ -60,3 +60,5 @@ output:
 27. $tvnairu_{+1} = tvnairu - tvnairu_{mce} \times (tvnairu - nairu)$
 
 $\Delta x = x_{+1} - x$
+
+$df^s$
