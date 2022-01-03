@@ -27,9 +27,9 @@ options(shiny.useragg = TRUE)
 # options(shiny.reactlog = TRUE)
 
 # fonts 
-# # font_add_google("Roboto", "roboto")
+font_add_google("Roboto", "roboto")
 # # sysfonts::font_add_google("Source Sans Pro", "source-sans-pro")
-# showtext_auto()
+showtext_auto()
 
 # Translation files
 # # read from xlsx data describing and documenting panels, variables, sliders, and so on
@@ -66,7 +66,7 @@ init_cty <- "FRA"
 init_sy <- 2022
 ameco_version <-  "11/2021"
 ameco_versions <- c("5/2021", "11/2021")
-globals <- set_globals(init_cty, version = "1.0.4", ameco_version=ameco_version)
+globals <- set_globals(init_cty, version = "1.0.5", ameco_version=ameco_version)
 
 # equations -------------------
 # equations should be located in odin folder
@@ -131,7 +131,7 @@ ui <- function(req) {
     includeCSS("www/dwrstyle.css"),
     includeCSS("www/katex.css"),
     getIPcaller(req),
-    
+    includeHTML("www/cookiebutton.html"),
     # ------ TITLE PANEL -------------------------------------------------------
     fluidRow(
       id = "title_panel",
@@ -257,7 +257,15 @@ ui <- function(req) {
               title = h6(i18n$t("Hypothèses simulation")),
               content = div(
                 dwr_slider("gpot_sj", globals, i18n),
-                dwr_slider("nairu", globals, i18n)
+                dwr_slider("nairu", globals, i18n),
+                selectInputWrapper(
+                  inputId = "ameco",
+                  label = i18n$t("Version d’AMECO"),
+                  help_text = help_text("ameco", globals$sliders),
+                  value = ameco_version,
+                  choices = ameco_versions,
+                  selected = ameco_version
+                )
               )
             )
           )
@@ -309,15 +317,7 @@ ui <- function(req) {
                 content = div(
                   dwr_slider("start_hist", globals, i18n),
                   dwr_slider("start_year", globals, i18n),
-                  dwr_slider("end_year", globals, i18n),
-                  selectInputWrapper(
-                    inputId = "ameco",
-                    label = i18n$t("Version d’AMECO"),
-                    help_text = help_text("ameco", globals$sliders),
-                    value = ameco_version,
-                    choices = ameco_versions,
-                    selected = ameco_version
-                  )
+                  dwr_slider("end_year", globals, i18n)
                 )
               )
             ),
@@ -537,7 +537,8 @@ ui <- function(req) {
       includeScript("www/js/slider_collapse.js"),
       includeScript("www/js/collapse.js"),
       includeScript("www/js/tooltip.js"),
-      includeScript("www/js/widgetwrappers.js")
+      includeScript("www/js/widgetwrappers.js"),
+      includeScript("www/js/copy_graph.js")
     ) # fluidRow body
   ) # fluidpage
 } # function ui

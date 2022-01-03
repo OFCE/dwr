@@ -262,7 +262,7 @@ pre_plot_sim <- function(scn, sim, gl, i18n) {
       show.legend = FALSE,
       na.rm = TRUE
     )
-    gfonts::use_font("source-sans-pro", "www/css/source-sans-pro.css")
+    # gfonts::use_font("source-sans-pro", "www/css/source-sans-pro.css")
     ggplot2::ggplot(sim_all) +
       graph_se +
       graph_text_up +
@@ -272,7 +272,7 @@ pre_plot_sim <- function(scn, sim, gl, i18n) {
       graph_fh +
       ggplot2::scale_colour_manual(values = color_scale, aesthetics = c("colour", "fill")) +
       ggplot2::scale_linetype_manual(values = lty) +
-      ggplot2::theme_minimal(base_family = "sans") +
+      ggplot2::theme_minimal(base_family = "roboto") +
       ggplot2::scale_x_continuous(breaks=sort(unique(c(start_hist, start_year, seq(round(start_hist/10)*10,end_year, 10)))))+
       ggplot2::xlab("") +
       ggplot2::ylab("")

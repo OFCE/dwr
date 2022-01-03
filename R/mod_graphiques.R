@@ -46,7 +46,13 @@ graphique_ui <- function(id, title, header, note, collapsed, i18n) {
             label = "csv", style = "minimal", size = "xs", color = "succes"
           ) |>
             shinyjs::hidden(),
-          uiOutput(ns("tweet"))
+          actionLink(
+            class = "copy-btn",
+            inputId = ns("copy"),
+            label = NULL,
+            icon = icon_colored("copy", "#1DA1F2", size="xs")
+          ),
+          span(id = ns("copy-success"), class = "copy-success")
         )
       )
     )
@@ -95,7 +101,7 @@ graphique_server <- function(id, pre_plot, vvars, sim, gl, i18n) {
               title = gl$panels$names[[id]],
               pays = gl$cty2code[[sim()$country]],
               uuid = uuids
-            )+theme(text = element_text("sans"))
+            )+theme(text = element_text("roboto"))
           }
           ,
           width = 11.2, height = 5, units = "in", bg = "white"
@@ -125,7 +131,7 @@ graphique_server <- function(id, pre_plot, vvars, sim, gl, i18n) {
               title = gl$panels$names[[id]],
               pays = gl$cty2code[[sim()$country]],
               uuid = uuids
-            )+theme(text = element_text("sans"))
+            )+theme(text = element_text("roboto"))
           },
           width = 11, height = 8, units = "in", bg="white", dpi = 72
         )
@@ -148,18 +154,7 @@ graphique_server <- function(id, pre_plot, vvars, sim, gl, i18n) {
         readr::write_csv(data, file = file)
       }
     )
-    ## tweet -------------------------
-    output$tweet <- renderUI({
-      url1 <- i18n$t(r"(https://twitter.com/intent/tweet?text=Regardez%20cette%20simulation%20ofce.shinyapps.io/debtwatchr)")
-      url2 <- str_c(r"(/?id=)", sim()$uuid)
-      url3 <- r"(%20%40XTimbeau%20%40HeyerEric%20%40EllAurissergues%20%40OFCEParis)"
-      url <- str_c(url1, url2, url3)
-      shinydashboardPlus::socialButton(
-        href = url,
-        icon=icon_colored("twitter","#1DA1F2", size="xs")
-      )
-    }
-    )
+    
     ## show btn ------------------------
     observe({
       if (is.null(sim())||sim()$uuid == "")

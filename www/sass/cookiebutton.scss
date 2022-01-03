@@ -1,0 +1,30 @@
+
+.CookiebotWidget-logo {
+  
+  background-color: white;
+  border: none;
+  cursor: pointer;
+  position: fixed;
+  bottom: 10px;
+  left: 10px;
+  z-index: 1;
+  
+  svg {
+    
+    display: block;
+    width: 48px;
+    height: 48px;
+    transition: all 0s ease;
+    transition-delay: .2s;
+    
+    circle {
+      fill: #141414;
+    }
+    
+    path {
+      fill: #ffffff
+    }
+    
+  }
+
+}

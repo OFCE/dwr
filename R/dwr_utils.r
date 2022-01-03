@@ -205,18 +205,18 @@ get_ameco <- function(reset = FALSE, countries = list("FRA"), variables = list("
     "112021" = "https://ec.europa.eu/economy_finance/db_indicators/ameco/documents/ameco0.zip"
   )
   
-  freset <- !file.exists("data/ameco_{version}.rds" |> glue())
+  freset <- !file.exists("data/ameco_{version}.rds" |> glue::glue())
   if (freset | reset) {
     dt <- download_ameco(url = ameco_url[version]) |>
       dplyr::filter(country %in% !!countries, code %in% !!variables)
-    saveRDS(dt, file = "data/ameco_{version}.rds" |> glue())
+    saveRDS(dt, file = "data/ameco_{version}.rds" |> glue::glue())
   } else {
-    dt <- readRDS("data/ameco_{version}.rds" |> glue())
+    dt <- readRDS("data/ameco_{version}.rds" |> glue::glue())
     freset <- !(setequal(unique(dt$country), countries) && setequal(unique(dt$code), variables))
     if (freset) {
       dt <- download_ameco(url = ameco_url[version]) |>
         dplyr::filter(country %in% !!countries, code %in% !!variables)
-      saveRDS(dt, file = "data/ameco_{version}.rds" |> glue())
+      saveRDS(dt, file = "data/ameco_{version}.rds" |> glue::glue())
     }
   }
   dt
@@ -225,9 +225,9 @@ get_ameco <- function(reset = FALSE, countries = list("FRA"), variables = list("
 get_ameco_date <- function(version = "5/2021") {
   if(is.null(version)) version <- "5/2021"
   version <- str_remove(version, "/")
-  if(!file.exists("data/ameco_{version}.rds" |> glue()))
+  if(!file.exists("data/ameco_{version}.rds" |> glue::glue()))
     return(NULL)
-  dt <- readRDS("data/ameco_{version}.rds" |> glue())
+  dt <- readRDS("data/ameco_{version}.rds" |> glue::glue())
   prev <- dt |> 
     filter(is.prev) |> 
     summarise(min = min(year, na.rm=TRUE),

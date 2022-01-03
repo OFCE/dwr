@@ -71,6 +71,18 @@
       
     }
     
+    .copy-btn {
+      padding-top: 2px; 
+      color: $dark;
+    }
+    
+    .copy-success {
+      font-size: 11px;
+      padding-top: 7px;
+      margin-left: 5px;
+      color: $red;
+    }
+    
   }
   
 }
