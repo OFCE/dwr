@@ -170,12 +170,14 @@ pre_plot_sim <- function(scn, sim, gl, i18n) {
       dplyr::filter(year > start_year, variable %in% var, scn_index == 1) |>
       dplyr::select(q0.025, q0.975)
     ylim_max <- max(
-      max(data_p_lims, na.rm = TRUE),
-      max(data_p_lims_se, na.rm = TRUE)
+      max(data_p_lims, na.rm = TRUE)
+      # ,
+      # max(data_p_lims_se, na.rm = TRUE)
     )
     ylim_min <- min(
-      min(data_p_lims, na.rm = TRUE),
-      min(data_p_lims_se, na.rm = TRUE)
+      min(data_p_lims, na.rm = TRUE)
+      # ,
+      # min(data_p_lims_se, na.rm = TRUE)
     )
     
     if(start_year<max(sim$fh$year))

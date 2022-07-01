@@ -75,7 +75,7 @@ scenarii_panel <- function(globals, i18n) {
           textInput(
             "nom_actuel",
             label = NULL,
-            value = "AMECO printemps 2021",
+            value = globals$ameco_nom,
             placeholder = "nom du scénario..."
           )
         ),

@@ -64,9 +64,9 @@ translation_en <- read.csv("data/translations/translation_en.csv", fileEncoding 
 # globals data -----------------------
 init_cty <- "FRA"
 init_sy <- 2022
-ameco_version <-  "11/2021"
-ameco_versions <- c("5/2021", "11/2021")
-globals <- set_globals(init_cty, version = "1.0.5", ameco_version=ameco_version)
+ameco_version <-  "5/2022"
+ameco_versions <- c("5/2021", "11/2021", "5/2022")
+globals <- set_globals(init_cty, version = "1.0.6", ameco_version=ameco_version)
 
 # equations -------------------
 # equations should be located in odin folder
@@ -131,7 +131,6 @@ ui <- function(req) {
     includeCSS("www/dwrstyle.css"),
     includeCSS("www/katex.css"),
     getIPcaller(req),
-    includeHTML("www/cookiebutton.html"),
     # ------ TITLE PANEL -------------------------------------------------------
     fluidRow(
       id = "title_panel",
@@ -202,6 +201,7 @@ ui <- function(req) {
           icon("linkedin"),
           target = "_blank"
         ),
+        includeHTML("www/cookiebutton.html"),
         span(stringr::str_c("v", globals$version), style = "font-size:9px;")
       )
     ),
@@ -450,9 +450,9 @@ ui <- function(req) {
                        download = "OFCE policy brief 96 Public Debt in the XXIst century.pdf"),
                 tags$small("Policy Brief de l'OFCE n°93, la dette publique au XXIe siècle"),
                 tags$br(),
-                tags$img(src="new.png", width = 25, height = 25), tags$small("données AMECO hiver 2021 (11/11/2021)"),
+                tags$img(src="new.png", width = 25, height = 25), tags$small("données AMECO printemps 2022 (04/05/2022)"),
                 tags$br(),
-                tags$small("Debtwatch ©2021 Timbeau, Heyer, Aurissergues sous licence CeCILL-B")
+                tags$small("Debtwatch ©2021-22 Timbeau, Heyer, Aurissergues sous licence CeCILL-B")
               ),
               tags$hr(),
               p(
@@ -669,7 +669,7 @@ server <- function(input, output, session) {
   )
   
   ## country_set ----------------------------
-  observeEvent(list(input$country, querycount()), {
+  observeEvent(list(input$country, input$ameco, querycount()), {
     country <- input$country
     start <- req(input$start_year)
     hist <- req(input$start_hist)
@@ -696,7 +696,6 @@ server <- function(input, output, session) {
       country_set$start_year <- dandp$start_year
       country_set$periods <- dandp$periods
 
-      
       new_presets <- calc_presets(country=country, globals, start_year = start, periods = periods) 
       if(nrow(scn)>0) {
         scn <- scn |> 
@@ -933,7 +932,6 @@ server <- function(input, output, session) {
     force_uuid(list(uuid = "", params = NULL, country = NULL, precalc = FALSE, ruleok=FALSE))
     scenarii(new_scenarii)
     record(new_record)
-    
     return(new_record)
   })
   

@@ -120,6 +120,12 @@ set_globals <- function(country = "FRA", version = "0.1", ameco_version="5/2021"
   
   # les sliders
   sliders <- listify(fsliders)
+  asplit <- str_split(ameco_version, "/") |> flatten_chr()
+  
+  ameco_nom <- case_when(
+    asplit[[1]]==5 ~ str_c("AMECO printemps ", asplit[[2]]),
+    asplit[[1]]==11 ~ str_c("AMECO hiver ", asplit[[2]]),
+    TRUE ~ str_c("AMECO ", ameco_version))
   
   # résultat final
   list(
@@ -128,6 +134,7 @@ set_globals <- function(country = "FRA", version = "0.1", ameco_version="5/2021"
     ivariables = icodes,
     country = country,
     ameco = ameco,
+    ameco_nom = ameco_nom,
     ameco_version = ameco_version,
     cn_year =cn_year,
     params = dp$params,
@@ -161,14 +168,18 @@ set_globals <- function(country = "FRA", version = "0.1", ameco_version="5/2021"
 download_ameco <- function(url) {
   download.file(url, destfile = "./data/ameco.zip")
   ameco <- unzip("data/ameco.zip", exdir = "./data/tmp")
+  if(file.exists("./data/tmp/ameco0.zip"))
+    ameco <- unzip("./data/tmp/ameco0.zip", exdir = "./data/tmp")
   dt <- data.table::rbindlist(purrr::map(ameco, ~ {
-    ff <- try(data.table::fread(.x), silent = TRUE)
+    ff <- try(data.table::fread(.x, sep=";"), silent = TRUE)
     if ("try-error" %in% class(ff)) {
       print("Erreur en lisant {.x} de ameco" |> glue::glue())
       ff <- data.table::data.table()
     }
     ff
   }), fill = TRUE)
+  out_cols <- names(dt)[stringr::str_detect(names(dt), "^V[:digit:]+")]
+  dt[, (out_cols):=NULL]
   file.remove("./data/ameco.zip")
   unlink("./data/tmp", recursive = TRUE)
   code_split <- stringr::str_split(dt$CODE, "\\.")
@@ -202,7 +213,8 @@ get_ameco <- function(reset = FALSE, countries = list("FRA"), variables = list("
   version <- str_remove(version, "/")
   ameco_url <- c(
     "52021"  = "https://ec.europa.eu/info/sites/default/files/economy-finance/ameco_spring2021.zip",
-    "112021" = "https://ec.europa.eu/economy_finance/db_indicators/ameco/documents/ameco0.zip"
+    "112021" = "https://ec.europa.eu/economy_finance/db_indicators/ameco/documents/ameco_autumn2021.zip",
+    "52022" = "https://ec.europa.eu/info/sites/default/files/economy-finance/ameco_spring2022_0.zip"
   )
   
   freset <- !file.exists("data/ameco_{version}.rds" |> glue::glue())

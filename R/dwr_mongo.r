@@ -48,7 +48,7 @@ inc_counter <- function(counter, mmg) {
                            mmg$database),
                          options = mongolite::ssl_options(weak_cert_validation = TRUE))
   # FindAndModify returns a counter with concurrent accesses
-  db$run('{"findAndModify":"count","query": {"name" : "[counter]"},"update":{"$inc":{"count":1}}, "new": "true"}' |> glue::glue(.open="[", .close="]"))$value$count
+  db$run('{"findAndModify":"count","query": {"name" : "[counter]"},"update":{"$inc":{"count":1}}, "new": true}' |> glue::glue(.open="[", .close="]"))$value$count
 }
 
 mongo_log <- function(ddf, mmg, no_log="") {

@@ -1,4 +1,5 @@
 "fr","en"
+"AMECO 5/2022","AMECO 5/2022"
 "AMECO 11/2021","AMECO 11/2021"
 "AMECO 5/2021","AMECO 5/2021"
 "Arthuis 2021","Arthuis 2021"
@@ -47,6 +48,7 @@
 "paramètres par défaut","default parameters"
 "https://twitter.com/intent/tweet?text=Regardez%20cette%20simulation%20ofce.shinyapps.io/debtwatchr","https://twitter.com/intent/tweet?text=Watch%20out%20this%20simulation%20ofce.shinyapps.io/debtwatchr"
 "Echec de la simulation","Simulation failed"
+"Calage DP/DIB","Tax/spending fine tuning"
 "Règle automatique","Automatic rule"
 "Nombre de tirages","Number of draws"
 "Tendance des dép. pub.","Public spending trend"
